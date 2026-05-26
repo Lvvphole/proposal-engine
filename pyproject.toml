@@ -37,4 +37,4 @@ include = ["contracts*", "integrations*", "pipelines*", "agents*", "proposal_eng
 line-length = 100
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["tests", "skill_opt/tests"]
