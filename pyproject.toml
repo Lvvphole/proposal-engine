@@ -30,6 +30,9 @@ dev = [
   "mypy"
 ]
 
+[tool.setuptools.packages.find]
+include = ["contracts*", "integrations*", "pipelines*", "agents*", "proposal_engine_mcp*"]
+
 [tool.ruff]
 line-length = 100
 
