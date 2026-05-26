@@ -1,0 +1,37 @@
+[project]
+name = "proposal-engine"
+version = "0.1.0"
+description = "Production-oriented multi-agent proposal engine"
+requires-python = ">=3.11"
+
+dependencies = [
+  "fastapi",
+  "uvicorn[standard]",
+  "pydantic",
+  "pydantic-settings",
+  "httpx",
+  "python-dotenv",
+  "redis",
+  "sqlalchemy",
+  "psycopg[binary]",
+  "pgvector",
+  "tenacity",
+  "orjson",
+  "structlog",
+  "opentelemetry-api",
+  "opentelemetry-sdk"
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest",
+  "pytest-asyncio",
+  "ruff",
+  "mypy"
+]
+
+[tool.ruff]
+line-length = 100
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
