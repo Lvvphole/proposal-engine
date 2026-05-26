@@ -1,0 +1,12 @@
+{
+  "primary_provider": "extend",
+  "api_version": "2026-02-09",
+  "allow_external_parser": true,
+  "fallback_on_failure": true,
+  "preserve_raw_response": true,
+  "require_page_numbers": true,
+  "require_block_metadata": true,
+  "max_sync_timeout_seconds": 300,
+  "audit_all_parse_runs": true,
+  "redact_api_key": true
+}
