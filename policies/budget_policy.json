@@ -1,0 +1,18 @@
+{
+  "version": "1.0",
+  "description": "Token and cost budget enforcement policy",
+  "limits": {
+    "daily_usd": 25.00,
+    "per_envelope_usd": 2.00,
+    "warning_threshold_pct": 0.80
+  },
+  "model_costs_per_1k_tokens": {
+    "claude-sonnet-4-20250514": { "input": 0.003, "output": 0.015 },
+    "claude-haiku-3-5-20241022": { "input": 0.0008, "output": 0.004 }
+  },
+  "actions": {
+    "on_warning": "log_and_continue",
+    "on_envelope_exceeded": "halt_and_escalate_to_human",
+    "on_daily_exceeded": "reject_new_envelopes"
+  }
+}

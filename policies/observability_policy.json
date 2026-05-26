@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "description": "Logging, metrics, and tracing configuration",
+  "logging": {
+    "format": "json",
+    "level": "INFO",
+    "include_trace_id": true,
+    "pii_redaction": true
+  },
+  "metrics": {
+    "export_interval_seconds": 60,
+    "counters": [
+      "extractions.completed",
+      "extractions.failed",
+      "validations.passed",
+      "validations.failed",
+      "errors.budget_exceeded",
+      "errors.recovery_exhausted"
+    ],
+    "histograms": [
+      "orchestrator.total",
+      "pipeline_a.duration",
+      "pipeline_b.duration",
+      "pipeline_c.duration"
+    ]
+  },
+  "tracing": {
+    "sample_rate": 1.0,
+    "propagation": "trace_id_in_envelope"
+  }
+}

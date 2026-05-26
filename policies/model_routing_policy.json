@@ -1,0 +1,31 @@
+{
+  "version": "1.0",
+  "description": "Which model to use for each agent/task",
+  "routes": {
+    "classifier": {
+      "model": "claude-haiku-3-5-20241022",
+      "max_tokens": 2000,
+      "rationale": "Classification is lightweight; Haiku is cost-efficient"
+    },
+    "header_extractor": {
+      "model": "claude-sonnet-4-20250514",
+      "max_tokens": 3000
+    },
+    "line_item_extractor": {
+      "model": "claude-sonnet-4-20250514",
+      "max_tokens": 8000
+    },
+    "totals_extractor": {
+      "model": "claude-sonnet-4-20250514",
+      "max_tokens": 2000
+    },
+    "recovery_agent": {
+      "model": "claude-sonnet-4-20250514",
+      "max_tokens": 10000
+    },
+    "pipeline_c_extractor": {
+      "model": "claude-sonnet-4-20250514",
+      "max_tokens": 12000
+    }
+  }
+}

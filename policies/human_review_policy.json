@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "description": "When and how human review is required",
+  "triggers": {
+    "always": ["proposal_delivery", "contractor_communication"],
+    "conditional": {
+      "quality_score_below": 0.75,
+      "confidence_below": 0.70,
+      "budget_warning": true,
+      "recovery_agent_invoked": true,
+      "new_supplier_first_extraction": true
+    }
+  },
+  "review_sla_hours": 24,
+  "escalation_on_timeout": "notify_admin"
+}

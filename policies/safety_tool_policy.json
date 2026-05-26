@@ -1,0 +1,12 @@
+{
+  "version": "1.0",
+  "description": "Safety guardrails for tool usage and data handling",
+  "rules": {
+    "never_auto_send_proposals": true,
+    "require_human_review": true,
+    "max_retries_before_human": 3,
+    "pii_handling": "redact_in_logs",
+    "document_retention_days": 90,
+    "audit_log_immutable": true
+  }
+}

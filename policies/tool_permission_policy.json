@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "description": "Permissions for MCP tools and external integrations",
+  "tools": {
+    "submit_quote": { "auth_required": false, "rate_limit_per_hour": 100 },
+    "get_proposal_status": { "auth_required": false },
+    "list_recent_proposals": { "auth_required": false },
+    "register_contractor": { "auth_required": true },
+    "register_supplier": { "auth_required": true }
+  },
+  "external_calls": {
+    "anthropic_api": { "allowed": true },
+    "database": { "allowed": true },
+    "outbound_email": { "allowed": false, "note": "No auto-sending" }
+  }
+}

@@ -1,0 +1,11 @@
+{
+  "version": "1.0",
+  "description": "Context compression rules for large documents",
+  "rules": {
+    "max_input_chars": 100000,
+    "truncation_strategy": "keep_first_and_last_pages",
+    "image_max_resolution": [2048, 2048],
+    "pdf_max_pages_full_text": 10,
+    "pdf_beyond_max_strategy": "first_3_and_last_2_pages"
+  }
+}

@@ -1,0 +1,59 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: production
+    ports:
+      - "8000:8000"
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  mcp:
+    build:
+      context: ..
+      dockerfile: infra/Dockerfile
+      target: mcp
+    ports:
+      - "3100:3100"
+    env_file:
+      - ../.env
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: proposal_engine
+      POSTGRES_USER: pe_user
+      POSTGRES_PASSWORD: pe_dev_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pe_user -d proposal_engine"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  frontend:
+    build:
+      context: ../frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - api
+
+volumes:
+  pgdata:

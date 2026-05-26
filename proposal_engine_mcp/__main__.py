@@ -1,0 +1,12 @@
+"""Entry point for `python -m proposal_engine_mcp`."""
+
+from proposal_engine_mcp.http import create_server
+
+
+def main() -> None:
+    server = create_server()
+    server.run()
+
+
+if __name__ == "__main__":
+    main()

@@ -1,0 +1,36 @@
+name: Regression Gate
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - "contracts/**"
+
+jobs:
+  contract-regression:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Run contract tests
+        run: pytest tests/test_contracts.py -v --tb=long
+      - name: Run validation gate tests
+        run: pytest tests/test_validation_gate.py -v --tb=long
+      - name: Verify contract exports
+        run: |
+          python -c "
+          from contracts import (
+              LineItem, HeaderData, TotalsData, ExtractionResult,
+              QuoteFormat, ClassificationResult,
+              Envelope, EnvelopeStatus,
+              DomainEvent, EventKind,
+              ReviewDecision, ReviewVerdict,
+              ContractViolation, ExtractionError, ValidationError,
+              BudgetExceededError, ClassificationError, RecoveryExhaustedError,
+          )
+          print('All contract exports verified.')
+          "
