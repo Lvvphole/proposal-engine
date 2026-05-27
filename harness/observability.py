@@ -1,12 +1,8 @@
-"""Structured logging and trace context propagation.
-
-Configures structlog for the entire application.  All modules use
-`structlog.get_logger()` — this module ensures they get the right
-processors.
-"""
+"""Structured logging and trace context propagation."""
 
 from __future__ import annotations
 
+import logging
 import uuid
 
 import structlog
@@ -29,7 +25,7 @@ def setup_logging(*, json_output: bool = True, level: str = "INFO") -> None:
     structlog.configure(
         processors=processors,
         wrapper_class=structlog.make_filtering_bound_logger(
-            structlog.get_level_from_name(level)
+            getattr(logging, level.upper(), logging.INFO)
         ),
         context_class=dict,
         logger_factory=structlog.PrintLoggerFactory(),
@@ -38,5 +34,4 @@ def setup_logging(*, json_output: bool = True, level: str = "INFO") -> None:
 
 
 def new_trace_id() -> str:
-    """Generate a new trace ID for request correlation."""
     return str(uuid.uuid4())

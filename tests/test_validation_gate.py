@@ -1,3 +1,4 @@
+import pytest
 """Tests for the validation gate."""
 
 from decimal import Decimal
@@ -48,17 +49,18 @@ class TestValidationGate:
         assert validate(result) is False
 
     def test_negative_price_fails(self):
-        result = _make_result(
-            line_items=[
-                LineItem(
-                    description="Bad Item",
-                    quantity=Decimal("1"),
-                    unit_price=Decimal("10.00"),
-                    extended_price=Decimal("-10.00"),
-                )
-            ]
-        )
-        assert validate(result) is False
+        from pydantic import ValidationError
+        with pytest.raises(ValidationError):
+            _make_result(
+                line_items=[
+                    LineItem(
+                        description="Bad Item",
+                        quantity=Decimal("1"),
+                        unit_price=Decimal("10.00"),
+                        extended_price=Decimal("-10.00"),
+                    )
+                ]
+            )
 
     def test_no_stated_subtotal_still_passes(self):
         result = _make_result(
