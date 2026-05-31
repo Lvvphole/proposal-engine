@@ -21,6 +21,8 @@ from contracts.errors import (
     ExtractionError,
     ValidationError,
     BudgetExceededError,
+    PolicyViolationError,
+    ContextWindowExceededError,
 )
 from contracts.events import DomainEvent, EventKind
 
@@ -39,6 +41,8 @@ __all__ = [
     "ExtractionError",
     "ValidationError",
     "BudgetExceededError",
+    "PolicyViolationError",
+    "ContextWindowExceededError",
     "DomainEvent",
     "EventKind",
 ]

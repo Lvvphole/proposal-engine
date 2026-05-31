@@ -38,3 +38,11 @@ class ClassificationError(ProposalEngineError):
 
 class RecoveryExhaustedError(ProposalEngineError):
     """Raised when all recovery strategies have been attempted and failed."""
+
+
+class PolicyViolationError(ProposalEngineError):
+    """Raised when an operation is denied by a policy (tool permission, rate limit, etc.)."""
+
+
+class ContextWindowExceededError(ProposalEngineError):
+    """Raised when a document exceeds the model's context window after compression."""
