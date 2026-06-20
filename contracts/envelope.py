@@ -39,6 +39,9 @@ class Envelope(BaseModel):
     created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
+    # Owning user (Supabase sub) when auth/tenancy is enabled.
+    owner_id: str | None = None
+
     # Source material
     source_filename: str | None = None
     source_content_type: str | None = None

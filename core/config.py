@@ -47,6 +47,14 @@ class Config(BaseSettings):
     # ── MCP ──────────────────────────────────────────────────────────
     mcp_server_port: int = Field(3100, alias="MCP_SERVER_PORT")
 
+    # ── Auth (Supabase JWT) ──────────────────────────────────────────
+    # When disabled (default), the API runs unauthenticated as a synthetic
+    # 'dev' principal — convenient for local dev/tests. Production sets
+    # AUTH_ENABLED=true and supplies the Supabase project's JWT secret.
+    auth_enabled: bool = Field(False, alias="AUTH_ENABLED")
+    supabase_jwt_secret: str = Field("", alias="SUPABASE_JWT_SECRET")
+    supabase_jwt_audience: str = Field("authenticated", alias="SUPABASE_JWT_AUDIENCE")
+
     def cors_origin_list(self) -> list[str]:
         """Parse ``cors_origins`` into a list of trimmed origins."""
         return [o.strip() for o in self.cors_origins.split(",") if o.strip()]

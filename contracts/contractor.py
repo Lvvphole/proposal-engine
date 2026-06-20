@@ -20,6 +20,8 @@ class ContractorProfile(BaseModel):
     id: str
     name: str
     company: str = ""
+    # Owning user (Supabase sub) when auth/tenancy is enabled.
+    owner_id: str | None = None
     default_markup_pct: float = Field(0.20, ge=0.0, le=1.0)
     category_markups: dict[str, float] = Field(
         default_factory=dict,
