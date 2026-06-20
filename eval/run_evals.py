@@ -102,7 +102,9 @@ def compare_to_baseline(results: dict, baseline: dict) -> bool:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run proposal-engine eval suites")
     parser.add_argument("--suite", type=str, default=None, help="Run specific suite only")
-    parser.add_argument("--update-baseline", action="store_true", help="Update baseline with current results")
+    parser.add_argument(
+        "--update-baseline", action="store_true", help="Update baseline with current results"
+    )
     args = parser.parse_args()
 
     suites = [args.suite] if args.suite else ["classifier", "line_items", "recovery"]

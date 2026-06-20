@@ -22,9 +22,7 @@ class Config(BaseSettings):
     anthropic_api_key: str = Field(..., alias="ANTHROPIC_API_KEY")
 
     # ── Database ─────────────────────────────────────────────────────
-    database_url: str = Field(
-        "sqlite:///./proposal_engine.db", alias="DATABASE_URL"
-    )
+    database_url: str = Field("sqlite:///./proposal_engine.db", alias="DATABASE_URL")
 
     # ── LLM Defaults ────────────────────────────────────────────────
     default_model: str = Field("claude-sonnet-4-20250514", alias="DEFAULT_MODEL")
@@ -33,9 +31,7 @@ class Config(BaseSettings):
     max_tokens: int = Field(4096, alias="MAX_TOKENS")
 
     # ── Budget ───────────────────────────────────────────────────────
-    budget_daily_limit_usd: Decimal = Field(
-        Decimal("25.00"), alias="BUDGET_DAILY_LIMIT_USD"
-    )
+    budget_daily_limit_usd: Decimal = Field(Decimal("25.00"), alias="BUDGET_DAILY_LIMIT_USD")
     budget_per_envelope_limit_usd: Decimal = Field(
         Decimal("2.00"), alias="BUDGET_PER_ENVELOPE_LIMIT_USD"
     )
@@ -45,11 +41,18 @@ class Config(BaseSettings):
     port: int = Field(8000, alias="PORT")
     debug: bool = Field(False, alias="DEBUG")
 
+    # Comma-separated list of allowed CORS origins (e.g. the Vercel frontend URL).
+    cors_origins: str = Field("http://localhost:3000", alias="CORS_ORIGINS")
+
     # ── MCP ──────────────────────────────────────────────────────────
     mcp_server_port: int = Field(3100, alias="MCP_SERVER_PORT")
+
+    def cors_origin_list(self) -> list[str]:
+        """Parse ``cors_origins`` into a list of trimmed origins."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 @lru_cache(maxsize=1)
 def get_config() -> Config:
     """Singleton config accessor."""
-    return Config()  # type: ignore[call-arg]
+    return Config()

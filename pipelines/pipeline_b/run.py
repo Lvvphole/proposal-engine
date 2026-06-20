@@ -13,8 +13,8 @@ import structlog
 
 from contracts.envelope import Envelope
 from contracts.extraction import ExtractionResult, HeaderData, LineItem, TotalsData
-from core.llm import call_llm
 from core.config import get_config
+from core.llm import call_llm
 
 logger = structlog.get_logger()
 
@@ -40,10 +40,7 @@ async def run(envelope: Envelope) -> ExtractionResult:
         data = {}
 
     header = HeaderData.model_validate(data.get("header", {"supplier_name": "Unknown"}))
-    line_items = [
-        LineItem.model_validate(item)
-        for item in data.get("line_items", [])
-    ]
+    line_items = [LineItem.model_validate(item) for item in data.get("line_items", [])]
     totals = TotalsData.model_validate(data.get("totals", {}))
 
     return ExtractionResult(

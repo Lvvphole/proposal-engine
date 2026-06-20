@@ -27,6 +27,7 @@ def register(server: Server) -> None:
             The registered supplier entry.
         """
         from rag.supplier_catalog import register_supplier as reg
+
         reg(name, preferred_pipeline=preferred_pipeline, notes=notes)
 
         return {
@@ -39,12 +40,14 @@ def register(server: Server) -> None:
     async def list_suppliers() -> dict[str, Any]:
         """List all known suppliers."""
         from rag.supplier_catalog import list_suppliers as ls
+
         return {"suppliers": ls()}
 
     @server.tool("get_supplier")
     async def get_supplier(name: str) -> dict[str, Any]:
         """Get supplier details and extraction history."""
         from rag.supplier_catalog import get_supplier
+
         entry = get_supplier(name)
         if entry is None:
             return {"error": f"Supplier '{name}' not found in catalog."}

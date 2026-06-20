@@ -10,7 +10,7 @@ when model routing policy changes.
 
 from __future__ import annotations
 
-from datetime import date, datetime, timezone
+from datetime import UTC, datetime
 from decimal import Decimal
 
 import structlog
@@ -34,20 +34,13 @@ _daily_spend: dict[str, Decimal] = {}  # date-string → total USD
 
 def _estimate_cost(input_tokens: int, output_tokens: int, model: str) -> Decimal:
     input_rate, output_rate = _COST_PER_1K.get(model, _DEFAULT_COST)
-    return (
-        Decimal(input_tokens) / 1000 * input_rate
-        + Decimal(output_tokens) / 1000 * output_rate
-    )
+    return Decimal(input_tokens) / 1000 * input_rate + Decimal(output_tokens) / 1000 * output_rate
 
 
 def estimate_envelope_cost(envelope: Envelope, model: str = "") -> Decimal:
     """Estimate total cost accumulated on an envelope so far."""
-    total_input = sum(
-        v for k, v in envelope.token_usage.items() if k.endswith("_input")
-    )
-    total_output = sum(
-        v for k, v in envelope.token_usage.items() if k.endswith("_output")
-    )
+    total_input = sum(v for k, v in envelope.token_usage.items() if k.endswith("_input"))
+    total_output = sum(v for k, v in envelope.token_usage.items() if k.endswith("_output"))
     return _estimate_cost(total_input, total_output, model)
 
 
@@ -63,7 +56,7 @@ def check_budget(envelope: Envelope, model: str = "") -> None:
             context={"envelope_id": envelope.id, "cost": str(envelope_cost)},
         )
 
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     daily_total = _daily_spend.get(today, Decimal("0")) + envelope_cost
     if daily_total > config.budget_daily_limit_usd:
         raise BudgetExceededError(
@@ -74,6 +67,6 @@ def check_budget(envelope: Envelope, model: str = "") -> None:
 
 def record_spend(amount: Decimal) -> None:
     """Record spend against the daily accumulator."""
-    today = datetime.now(timezone.utc).date().isoformat()
+    today = datetime.now(UTC).date().isoformat()
     _daily_spend[today] = _daily_spend.get(today, Decimal("0")) + amount
     logger.info("spend_recorded", amount=str(amount), daily_total=str(_daily_spend[today]))

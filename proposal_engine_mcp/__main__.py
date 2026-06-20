@@ -1,7 +1,9 @@
 """Entry point for python -m proposal_engine_mcp."""
 
 import asyncio
+
 from mcp.server.stdio import stdio_server
+
 from proposal_engine_mcp.http import create_server
 
 

@@ -53,7 +53,7 @@ def score_line_items(extracted: list[dict], expected: list[dict]) -> float:
     avg_price_error = sum(price_errors) / len(price_errors) if price_errors else 0.0
     price_score = max(0.0, 1.0 - avg_price_error)
 
-    return (count_score * 0.3 + match_rate * 0.4 + price_score * 0.3)
+    return count_score * 0.3 + match_rate * 0.4 + price_score * 0.3
 
 
 def score_header(extracted: dict, expected: dict) -> float:
@@ -104,15 +104,9 @@ def score_totals(extracted: dict, expected: dict) -> float:
 
 def score_extraction(extracted: dict, expected: dict) -> float:
     """Composite score across all extraction components."""
-    header_score = score_header(
-        extracted.get("header", {}), expected.get("header", {})
-    )
-    items_score = score_line_items(
-        extracted.get("line_items", []), expected.get("line_items", [])
-    )
-    totals_score = score_totals(
-        extracted.get("totals", {}), expected.get("totals", {})
-    )
+    header_score = score_header(extracted.get("header", {}), expected.get("header", {}))
+    items_score = score_line_items(extracted.get("line_items", []), expected.get("line_items", []))
+    totals_score = score_totals(extracted.get("totals", {}), expected.get("totals", {}))
 
     return header_score * 0.2 + items_score * 0.5 + totals_score * 0.3
 

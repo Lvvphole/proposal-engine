@@ -9,7 +9,8 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
-from pydantic import BaseModel, ValidationError as PydanticValidationError
+from pydantic import BaseModel
+from pydantic import ValidationError as PydanticValidationError
 
 from contracts.errors import ContractViolation
 
@@ -17,7 +18,7 @@ logger = structlog.get_logger()
 
 
 def validate_handoff(
-    data: dict | BaseModel,
+    data: dict[str, Any] | BaseModel,
     contract: type[BaseModel],
     *,
     source_agent: str,

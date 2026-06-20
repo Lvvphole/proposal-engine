@@ -6,8 +6,9 @@ observability / instrumentation layer.
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -35,7 +36,7 @@ class DomainEvent(BaseModel):
     """A single event in an envelope's lifecycle."""
 
     kind: EventKind
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(UTC))
     agent: str = Field(..., description="Which agent/component emitted this event")
     detail: str = ""
-    metadata: dict = Field(default_factory=dict)
+    metadata: dict[str, Any] = Field(default_factory=dict)

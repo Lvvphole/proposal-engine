@@ -1,10 +1,17 @@
-"""Contractor context retrieval.
+"""Contractor preference engine.
 
-Loads contractor-specific preferences that shape proposal generation:
-  - Default markup percentages by category
-  - Payment terms preferences
+Loads and persists contractor-specific preferences that shape proposal
+generation:
+
+  - Default markup percentage + per-category overrides
+  - Payment terms
   - Branding / header templates
-  - Past proposal history for consistency
+  - Prior-proposal history summary
+
+Profiles are persisted in the database (``contractors`` table) so they
+survive restarts and are shared across the API and MCP server. ``get_context``
+returns the shape consumed by proposal generation and prompt assembly, falling
+back to sensible defaults for an unknown contractor.
 """
 
 from __future__ import annotations
@@ -12,40 +19,43 @@ from __future__ import annotations
 from typing import Any
 
 import structlog
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from contracts.contractor import ContractorProfile
+from harness.models import (
+    list_contractor_profiles,
+    load_contractor,
+    save_contractor,
+)
 
 logger = structlog.get_logger()
 
-# Placeholder store — production uses database
-_CONTRACTOR_PROFILES: dict[str, dict[str, Any]] = {}
+
+async def upsert_contractor(profile: ContractorProfile, session: AsyncSession) -> ContractorProfile:
+    """Create or update a contractor profile."""
+    await save_contractor(profile, session)
+    logger.info("contractor_upserted", contractor_id=profile.id)
+    return profile
 
 
-def register_contractor(contractor_id: str, profile: dict[str, Any]) -> None:
-    """Register or update a contractor's profile."""
-    _CONTRACTOR_PROFILES[contractor_id] = profile
-    logger.info("contractor_registered", contractor_id=contractor_id)
+async def get_profile(contractor_id: str, session: AsyncSession) -> ContractorProfile | None:
+    """Return the stored profile, or None if the contractor is unknown."""
+    return await load_contractor(contractor_id, session)
 
 
-def get_context(contractor_id: str) -> dict[str, Any]:
+async def get_context(contractor_id: str, session: AsyncSession) -> dict[str, Any]:
     """Retrieve contractor context for proposal generation.
 
-    Returns:
-        Dict with keys: markup_rules, payment_terms, branding, history_summary.
-        Returns sensible defaults if contractor is unknown.
+    Returns a dict with keys: contractor_id, name, company, markup_rules,
+    payment_terms, branding, history_summary. Falls back to default markup
+    and terms when the contractor is not on file.
     """
-    profile = _CONTRACTOR_PROFILES.get(contractor_id, {})
-
-    return {
-        "contractor_id": contractor_id,
-        "markup_rules": profile.get("markup_rules", {
-            "default_pct": 0.20,
-            "materials_pct": 0.15,
-            "labor_pct": 0.25,
-        }),
-        "payment_terms": profile.get("payment_terms", "Due on completion"),
-        "branding": profile.get("branding", {}),
-        "history_summary": profile.get("history_summary", "No prior proposals on file."),
-    }
+    profile = await load_contractor(contractor_id, session)
+    if profile is None:
+        profile = ContractorProfile(id=contractor_id, name="(unknown)")
+    return profile.to_context()
 
 
-def list_contractors() -> list[str]:
-    return list(_CONTRACTOR_PROFILES.keys())
+async def list_contractors(session: AsyncSession) -> list[ContractorProfile]:
+    """List all stored contractor profiles."""
+    return await list_contractor_profiles(session)

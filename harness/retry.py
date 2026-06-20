@@ -8,16 +8,10 @@ Wraps tenacity with pipeline-specific policies:
 
 from __future__ import annotations
 
-from typing import Any, Awaitable, Callable, TypeVar
+from collections.abc import Awaitable, Callable
+from typing import Any, TypeVar
 
 import structlog
-from tenacity import (
-    RetryError,
-    retry,
-    retry_if_exception_type,
-    stop_after_attempt,
-    wait_exponential,
-)
 
 from contracts.errors import (
     BudgetExceededError,

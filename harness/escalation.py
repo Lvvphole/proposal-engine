@@ -12,8 +12,8 @@ from __future__ import annotations
 import structlog
 
 from contracts.envelope import Envelope, EnvelopeStatus
-from contracts.events import DomainEvent, EventKind
 from contracts.errors import BudgetExceededError, RecoveryExhaustedError
+from contracts.events import DomainEvent, EventKind
 from core import message_bus
 
 logger = structlog.get_logger()

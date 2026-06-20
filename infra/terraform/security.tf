@@ -21,17 +21,8 @@ resource "aws_security_group" "api" {
   }
 }
 
-resource "aws_security_group" "db" {
-  name_prefix = "proposal-engine-db-"
-  vpc_id      = module.vpc.vpc_id
-
-  ingress {
-    from_port       = 5432
-    to_port         = 5432
-    protocol        = "tcp"
-    security_groups = [aws_security_group.api.id]
-  }
-}
+# Postgres lives on Supabase (managed), so no in-VPC database security
+# group is required; the API egresses to Supabase over TLS.
 
 # ── Secrets Manager ──────────────────────────────────────
 
@@ -41,8 +32,8 @@ resource "aws_secretsmanager_secret" "anthropic_api_key" {
 }
 
 resource "aws_secretsmanager_secret" "db_credentials" {
-  name        = "proposal-engine/${var.environment}/db-credentials"
-  description = "RDS database credentials"
+  name        = "proposal-engine/${var.environment}/database-url"
+  description = "Supabase Postgres connection string (DATABASE_URL)"
 }
 
 # ── IAM ──────────────────────────────────────────────────

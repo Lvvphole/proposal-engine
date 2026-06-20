@@ -26,12 +26,14 @@ def add_example(
     pipeline: str = "",
 ) -> None:
     """Add a verified extraction example to the few-shot pool."""
-    _examples.append({
-        "document_snippet": document_snippet[:1000],
-        "extraction_result": extraction_result,
-        "supplier": supplier.lower(),
-        "pipeline": pipeline,
-    })
+    _examples.append(
+        {
+            "document_snippet": document_snippet[:1000],
+            "extraction_result": extraction_result,
+            "supplier": supplier.lower(),
+            "pipeline": pipeline,
+        }
+    )
     logger.info("few_shot_example_added", total=len(_examples), supplier=supplier)
 
 
@@ -51,7 +53,8 @@ async def select(
     """
     # Tier 1: exact supplier + pipeline match
     exact = [
-        ex for ex in _examples
+        ex
+        for ex in _examples
         if ex["supplier"] == supplier_hint.lower() and ex["pipeline"] == pipeline
     ]
     if len(exact) >= k:

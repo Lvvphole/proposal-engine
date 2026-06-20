@@ -8,6 +8,7 @@ decisions.
 from __future__ import annotations
 
 from enum import StrEnum
+from typing import Any
 
 from pydantic import BaseModel, Field
 
@@ -26,7 +27,7 @@ class ReviewDecision(BaseModel):
     verdict: ReviewVerdict
     reviewer_id: str
     notes: str = ""
-    edits: dict = Field(
+    edits: dict[str, Any] = Field(
         default_factory=dict,
         description="Key-value edits the reviewer made to the proposal",
     )

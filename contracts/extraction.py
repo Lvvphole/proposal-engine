@@ -12,7 +12,7 @@ from decimal import Decimal
 from enum import StrEnum
 from typing import Annotated
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, ValidationInfo, field_validator
 
 
 class UnitOfMeasure(StrEnum):
@@ -41,7 +41,7 @@ class LineItem(BaseModel):
 
     @field_validator("extended_price")
     @classmethod
-    def extended_must_match(cls, v: Decimal, info) -> Decimal:
+    def extended_must_match(cls, v: Decimal, info: ValidationInfo) -> Decimal:
         """Warn if extended_price != quantity * unit_price (within tolerance)."""
         data = info.data
         if "quantity" in data and "unit_price" in data:
@@ -103,7 +103,7 @@ class ExtractionResult(BaseModel):
 
     @property
     def computed_subtotal(self) -> Decimal:
-        return sum(item.extended_price for item in self.line_items)
+        return sum((item.extended_price for item in self.line_items), Decimal("0"))
 
     @property
     def line_item_count(self) -> int:

@@ -4,13 +4,14 @@ from __future__ import annotations
 
 import logging
 import uuid
+from typing import Any
 
 import structlog
 
 
 def setup_logging(*, json_output: bool = True, level: str = "INFO") -> None:
     """Configure structlog for the application."""
-    processors = [
+    processors: list[Any] = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.TimeStamper(fmt="iso"),

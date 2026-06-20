@@ -2,9 +2,15 @@
 
 from __future__ import annotations
 
+import uuid
 from typing import Any
 
 from mcp.server import Server
+
+from contracts.contractor import ContractorProfile
+from core.db import _get_session_factory
+from rag.contractor_context import get_context, upsert_contractor
+from rag.contractor_context import list_contractors as list_contractor_profiles
 
 
 def register(server: Server) -> None:
@@ -28,16 +34,16 @@ def register(server: Server) -> None:
         Returns:
             The new contractor profile with generated ID.
         """
-        import uuid
         contractor_id = str(uuid.uuid4())[:8]
-
-        from rag.contractor_context import register_contractor as reg
-        reg(contractor_id, {
-            "name": name,
-            "company": company,
-            "markup_rules": {"default_pct": default_markup_pct},
-            "payment_terms": payment_terms,
-        })
+        profile = ContractorProfile(
+            id=contractor_id,
+            name=name,
+            company=company,
+            default_markup_pct=default_markup_pct,
+            payment_terms=payment_terms,
+        )
+        async with _get_session_factory()() as session:
+            await upsert_contractor(profile, session)
 
         return {
             "contractor_id": contractor_id,
@@ -49,11 +55,12 @@ def register(server: Server) -> None:
     @server.tool("list_contractors")
     async def list_contractors() -> dict[str, Any]:
         """List all registered contractors."""
-        from rag.contractor_context import list_contractors as lc
-        return {"contractors": lc()}
+        async with _get_session_factory()() as session:
+            profiles = await list_contractor_profiles(session)
+        return {"contractors": [p.model_dump() for p in profiles]}
 
     @server.tool("get_contractor")
     async def get_contractor(contractor_id: str) -> dict[str, Any]:
-        """Get a contractor's full profile and context."""
-        from rag.contractor_context import get_context
-        return get_context(contractor_id)
+        """Get a contractor's full proposal-generation context."""
+        async with _get_session_factory()() as session:
+            return await get_context(contractor_id, session)

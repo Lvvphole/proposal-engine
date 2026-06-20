@@ -5,19 +5,18 @@ control flow.  LLM calls are mocked.
 """
 
 from decimal import Decimal
-from unittest.mock import AsyncMock, patch
 
 import pytest
 
-from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.classifier import ClassificationResult, QuoteFormat
+from contracts.envelope import Envelope, EnvelopeStatus
+from contracts.errors import BudgetExceededError
 from contracts.extraction import (
     ExtractionResult,
     HeaderData,
     LineItem,
     TotalsData,
 )
-from contracts.errors import BudgetExceededError
 
 
 class TestOrchestrator:

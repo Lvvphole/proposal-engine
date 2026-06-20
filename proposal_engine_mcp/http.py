@@ -2,15 +2,16 @@
 
 from __future__ import annotations
 
-from mcp.server import Server
-from mcp.types import Tool, TextContent
 import json
+
+from mcp.server import Server
+from mcp.types import TextContent, Tool
 
 
 def create_server() -> Server:
     server = Server("proposal-engine")
 
-    TOOLS = {
+    tools = {
         "submit_quote": {
             "description": "Submit a supplier quote for extraction",
             "inputSchema": {
@@ -87,11 +88,15 @@ def create_server() -> Server:
 
     @server.list_tools()
     async def list_tools():
-        return [Tool(name=k, description=v["description"], inputSchema=v["inputSchema"]) for k, v in TOOLS.items()]
+        return [
+            Tool(name=k, description=v["description"], inputSchema=v["inputSchema"])
+            for k, v in tools.items()
+        ]
 
     @server.call_tool()
     async def call_tool(name: str, arguments: dict):
         from proposal_engine_mcp.handlers import dispatch
+
         result = await dispatch.handle(name, arguments)
         return [TextContent(type="text", text=json.dumps(result))]
 

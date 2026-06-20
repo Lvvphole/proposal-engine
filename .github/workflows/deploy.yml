@@ -1,3 +1,7 @@
+# Backend (API + MCP) deploys to AWS ECS. The Next.js frontend is hosted on
+# Vercel and deploys via Vercel's own Git integration (root directory:
+# `frontend/`), so it is intentionally not built here. The database is
+# Supabase Postgres; migrations run in the `migrate` job below.
 name: Deploy
 
 on:
@@ -6,6 +10,7 @@ on:
     paths-ignore:
       - "docs/**"
       - "commercial/**"
+      - "frontend/**"
       - "*.md"
 
 jobs:
@@ -41,8 +46,24 @@ jobs:
             -t ${{ steps.ecr-login.outputs.registry }}/proposal-engine-mcp:latest .
           docker push ${{ steps.ecr-login.outputs.registry }}/proposal-engine-mcp --all-tags
 
-  deploy:
+  migrate:
     needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+      - name: Apply database migrations (Supabase)
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: alembic upgrade head
+
+  deploy:
+    needs: migrate
     runs-on: ubuntu-latest
     steps:
       - name: Deploy to ECS

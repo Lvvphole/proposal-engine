@@ -7,6 +7,10 @@ from decimal import Decimal
 import pytest
 from pydantic import ValidationError
 
+from contracts.classifier import ClassificationResult, QuoteFormat
+from contracts.envelope import Envelope, EnvelopeStatus
+from contracts.errors import BudgetExceededError, ContractViolation
+from contracts.events import DomainEvent, EventKind
 from contracts.extraction import (
     ExtractionResult,
     HeaderData,
@@ -14,10 +18,6 @@ from contracts.extraction import (
     TotalsData,
     UnitOfMeasure,
 )
-from contracts.classifier import ClassificationResult, QuoteFormat
-from contracts.envelope import Envelope, EnvelopeStatus
-from contracts.events import DomainEvent, EventKind
-from contracts.errors import ContractViolation, BudgetExceededError
 
 
 class TestLineItem:

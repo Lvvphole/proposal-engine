@@ -7,24 +7,25 @@ at pipeline seams.  If data doesn't fit a contract, fix the producer —
 never loosen the contract to match bad data.
 """
 
-from contracts.envelope import Envelope, EnvelopeStatus
-from contracts.extraction import (
-    LineItem,
-    ExtractionResult,
-    HeaderData,
-    TotalsData,
-)
 from contracts.classifier import ClassificationResult, QuoteFormat
-from contracts.review import ReviewDecision, ReviewVerdict
+from contracts.contractor import ContractorProfile
+from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.errors import (
+    BudgetExceededError,
+    ContextWindowExceededError,
     ContractViolation,
     ExtractionError,
-    ValidationError,
-    BudgetExceededError,
     PolicyViolationError,
-    ContextWindowExceededError,
+    ValidationError,
 )
 from contracts.events import DomainEvent, EventKind
+from contracts.extraction import (
+    ExtractionResult,
+    HeaderData,
+    LineItem,
+    TotalsData,
+)
+from contracts.review import ReviewDecision, ReviewVerdict
 
 __all__ = [
     "Envelope",
@@ -35,6 +36,7 @@ __all__ = [
     "TotalsData",
     "ClassificationResult",
     "QuoteFormat",
+    "ContractorProfile",
     "ReviewDecision",
     "ReviewVerdict",
     "ContractViolation",

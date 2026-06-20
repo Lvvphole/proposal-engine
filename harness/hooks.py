@@ -3,7 +3,8 @@
 from __future__ import annotations
 
 import re
-from typing import Any, Awaitable, Callable
+from collections.abc import Awaitable, Callable
+from typing import Any
 
 import structlog
 
@@ -47,7 +48,9 @@ class HookRegistry:
             try:
                 await hook(event, context)
             except Exception as exc:
-                logger.warning("before_hook_failed", hook=hook.__name__, event=event, error=str(exc))
+                logger.warning(
+                    "before_hook_failed", hook=hook.__name__, event=event, error=str(exc)
+                )
 
     async def run_after_hooks(self, event: str, context: dict[str, Any]) -> None:
         for hook in self._after:
@@ -66,7 +69,11 @@ async def pii_redaction_hook(event: str, context: dict[str, Any]) -> None:
 
 async def audit_logging_hook(event: str, context: dict[str, Any]) -> None:
     """Log every pipeline event for audit purposes."""
-    logger.info("pipeline_event", event=event, **{k: v for k, v in context.items() if k != "source_bytes_b64"})
+    logger.info(
+        "pipeline_event",
+        event=event,
+        **{k: v for k, v in context.items() if k != "source_bytes_b64"},
+    )
 
 
 def install_default_hooks(registry: HookRegistry) -> None:

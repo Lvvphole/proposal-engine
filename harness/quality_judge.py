@@ -29,7 +29,8 @@ def score_extraction(result: ExtractionResult) -> float:
 
     # 1. Line item completeness
     complete_items = sum(
-        1 for item in result.line_items
+        1
+        for item in result.line_items
         if item.description and item.quantity > 0 and item.unit_price >= 0
     )
     scores.append(complete_items / max(len(result.line_items), 1))

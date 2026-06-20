@@ -47,35 +47,11 @@ module "vpc" {
   single_nat_gateway = true
 }
 
-# ── RDS PostgreSQL ───────────────────────────────────────
-
-resource "aws_db_instance" "main" {
-  identifier     = "proposal-engine-${var.environment}"
-  engine         = "postgres"
-  engine_version = "16.2"
-  instance_class = "db.t3.micro"
-
-  allocated_storage = 20
-  storage_encrypted = true
-
-  db_name  = "proposal_engine"
-  username = "pe_admin"
-  password = var.db_password
-
-  vpc_security_group_ids = [aws_security_group.db.id]
-  db_subnet_group_name   = aws_db_subnet_group.main.name
-
-  skip_final_snapshot = var.environment != "production"
-}
-
-variable "db_password" {
-  sensitive = true
-}
-
-resource "aws_db_subnet_group" "main" {
-  name       = "proposal-engine-${var.environment}"
-  subnet_ids = module.vpc.private_subnets
-}
+# ── Database ─────────────────────────────────────────────
+# Postgres is hosted on Supabase (managed), not RDS. The full connection
+# string (DATABASE_URL) is stored in Secrets Manager — see security.tf —
+# and injected into the ECS task as the DATABASE_URL env var. Run
+# `alembic upgrade head` against it to apply migrations.
 
 # ── ECS Cluster ──────────────────────────────────────────
 

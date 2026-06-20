@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import time
 from collections import defaultdict
+from collections.abc import Iterator
 from contextlib import contextmanager
 
 import structlog
@@ -23,7 +24,7 @@ def increment(name: str, value: int = 1) -> None:
 
 
 @contextmanager
-def timer(name: str):
+def timer(name: str) -> Iterator[None]:
     """Context manager that records elapsed time to a histogram."""
     start = time.perf_counter()
     yield

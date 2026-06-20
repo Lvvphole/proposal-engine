@@ -5,17 +5,18 @@ from __future__ import annotations
 import json
 import time
 from pathlib import Path
+from typing import Any
 
 from contracts.errors import PolicyViolationError
 
 _POLICY_DIR = Path(__file__).parent.parent / "policies"
 
-_tool_policy_cache: dict | None = None
-_review_policy_cache: dict | None = None
+_tool_policy_cache: dict[str, Any] | None = None
+_review_policy_cache: dict[str, Any] | None = None
 _rate_limit_counters: dict[str, list[float]] = {}
 
 
-def _load_tool_policy() -> dict:
+def _load_tool_policy() -> dict[str, Any]:
     global _tool_policy_cache
     if _tool_policy_cache is None:
         path = _POLICY_DIR / "tool_permission_policy.json"
@@ -23,7 +24,7 @@ def _load_tool_policy() -> dict:
     return _tool_policy_cache
 
 
-def _load_review_policy() -> dict:
+def _load_review_policy() -> dict[str, Any]:
     global _review_policy_cache
     if _review_policy_cache is None:
         path = _POLICY_DIR / "human_review_policy.json"
@@ -31,7 +32,7 @@ def _load_review_policy() -> dict:
     return _review_policy_cache
 
 
-def check_tool_policy(tool_name: str, *, require_auth: bool = False) -> dict:
+def check_tool_policy(tool_name: str, *, require_auth: bool = False) -> dict[str, Any]:
     """Check whether a tool call is permitted.
 
     Returns the tool's policy dict if permitted.
@@ -39,9 +40,9 @@ def check_tool_policy(tool_name: str, *, require_auth: bool = False) -> dict:
     or if the rate limit per hour has been exceeded.
     """
     policy = _load_tool_policy()
-    tools = policy.get("tools", {})
+    tools: dict[str, Any] = policy.get("tools", {})
 
-    tool_cfg = tools.get(tool_name, {})
+    tool_cfg: dict[str, Any] = tools.get(tool_name, {})
     auth_required = tool_cfg.get("auth_required", False)
 
     if auth_required and not require_auth:
@@ -87,15 +88,13 @@ def check_human_review_required(envelope: object) -> bool:
     if extraction is not None:
         quality_score = getattr(extraction, "quality_score", None)
         threshold = conditional.get("quality_score_below")
-        if quality_score is not None and threshold is not None:
-            if quality_score < threshold:
-                return True
+        if quality_score is not None and threshold is not None and quality_score < threshold:
+            return True
 
         confidence = getattr(extraction, "extraction_confidence", None)
         conf_threshold = conditional.get("confidence_below")
-        if confidence is not None and conf_threshold is not None:
-            if confidence < conf_threshold:
-                return True
+        if confidence is not None and conf_threshold is not None and confidence < conf_threshold:
+            return True
 
     return False
 

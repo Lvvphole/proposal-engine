@@ -20,11 +20,13 @@ _examples: list[dict[str, Any]] = []
 
 def add_example(document_text: str, extraction: dict, metadata: dict | None = None) -> None:
     """Add a successful extraction as a few-shot example."""
-    _examples.append({
-        "text": document_text[:1000],
-        "extraction": extraction,
-        "metadata": metadata or {},
-    })
+    _examples.append(
+        {
+            "text": document_text[:1000],
+            "extraction": extraction,
+            "metadata": metadata or {},
+        }
+    )
     logger.info("example_added", total=len(_examples))
 
 

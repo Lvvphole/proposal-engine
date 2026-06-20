@@ -7,11 +7,13 @@ catches and routes them to the appropriate recovery path.
 
 from __future__ import annotations
 
+from typing import Any
+
 
 class ProposalEngineError(Exception):
     """Base for all proposal-engine errors."""
 
-    def __init__(self, message: str, *, context: dict | None = None) -> None:
+    def __init__(self, message: str, *, context: dict[str, Any] | None = None) -> None:
         super().__init__(message)
         self.context = context or {}
 

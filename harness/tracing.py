@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Any, Generator
+from typing import Any
 
 try:
     from opentelemetry import trace
     from opentelemetry.sdk.trace import TracerProvider
-    from opentelemetry.sdk.trace.export import SimpleSpanProcessor
-    from opentelemetry.sdk.trace.export.in_memory_span_exporter import InMemorySpanExporter
+
     _OTEL_AVAILABLE = True
 except ImportError:  # pragma: no cover
     _OTEL_AVAILABLE = False
@@ -33,7 +33,7 @@ class NoOpSpan:
     def end(self) -> None:
         pass
 
-    def __enter__(self) -> "NoOpSpan":
+    def __enter__(self) -> NoOpSpan:
         return self
 
     def __exit__(self, *args: Any) -> None:
@@ -54,7 +54,7 @@ def setup_tracing(service_name: str = "proposal-engine") -> None:
 def start_span(name: str, **attributes: Any) -> Generator[Any, None, None]:
     """Start a tracing span, yielding a no-op if OTel is unavailable."""
     if not _OTEL_AVAILABLE or _tracer is None:
-        span = NoOpSpan()
+        span: Any = NoOpSpan()
         yield span
         return
 
@@ -84,6 +84,7 @@ def record_error(span: Any, error: Exception) -> None:
     try:
         if _OTEL_AVAILABLE:
             from opentelemetry.trace import StatusCode
+
             span.set_status(StatusCode.ERROR, str(error))
     except Exception:
         pass

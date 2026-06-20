@@ -4,14 +4,15 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from typing import Any
 
 from contracts.errors import ContextWindowExceededError
 
 _POLICY_PATH = Path(__file__).parent.parent / "policies" / "compression_policy.json"
-_policy_cache: dict | None = None
+_policy_cache: dict[str, Any] | None = None
 
 
-def _load_policy() -> dict:
+def _load_policy() -> dict[str, Any]:
     global _policy_cache
     if _policy_cache is None:
         _policy_cache = json.loads(_POLICY_PATH.read_text())
@@ -25,6 +26,7 @@ def count_tokens(text: str) -> int:
     """
     try:
         import tiktoken
+
         enc = tiktoken.get_encoding("cl100k_base")
         return len(enc.encode(text))
     except Exception:

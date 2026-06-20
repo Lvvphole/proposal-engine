@@ -31,13 +31,42 @@ export default function Home() {
       const data = await res.json();
       setEnvelopeId(data.envelope_id);
       setStatus("processing");
-
-      // Poll for completion (simplified)
-      setTimeout(() => setStatus("review"), 3000);
+      pollStatus(data.envelope_id);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Upload failed");
       setStatus("idle");
     }
+  };
+
+  // Poll the quote status until extraction is ready for review (or it fails).
+  const pollStatus = (id: string) => {
+    const deadline = Date.now() + 120_000; // give up after 2 minutes
+    const tick = async () => {
+      try {
+        const res = await fetch(`/api/quotes/${id}`);
+        if (res.ok) {
+          const data = await res.json();
+          if (data.status === "review_pending" || data.status === "approved") {
+            setStatus("review");
+            return;
+          }
+          if (data.status === "failed") {
+            setError("Extraction failed. Please try another quote.");
+            setStatus("idle");
+            return;
+          }
+        }
+      } catch {
+        // transient error — keep polling until the deadline
+      }
+      if (Date.now() < deadline) {
+        setTimeout(tick, 2000);
+      } else {
+        setError("Timed out waiting for extraction.");
+        setStatus("idle");
+      }
+    };
+    setTimeout(tick, 2000);
   };
 
   return (

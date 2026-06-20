@@ -11,8 +11,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.contractors import router as contractors_router
 from app.api.events import events_router
 from app.api.routes import router
+from core.config import get_config
 from core.db import init_db
 from core.streaming import SSEBridge
 from harness.hooks import HookRegistry, install_default_hooks
@@ -41,13 +43,14 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=get_config().cors_origin_list(),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(contractors_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
 
 

@@ -8,12 +8,14 @@ Flow: header_extractor → line_item_extractor → totals_extractor → assemble
 
 from __future__ import annotations
 
+from typing import Any
+
 import structlog
 
 from contracts.envelope import Envelope
 from contracts.extraction import ExtractionResult, HeaderData, LineItem, TotalsData
-from core.llm import call_llm
 from core.config import get_config
+from core.llm import call_llm
 from harness.handoff import validate_handoff
 
 logger = structlog.get_logger()
@@ -66,20 +68,22 @@ async def run(envelope: Envelope) -> ExtractionResult:
 
     # Assemble final result
     return ExtractionResult(
-        header=header,  # type: ignore[arg-type]
+        header=header,
         line_items=line_items,
-        totals=totals,  # type: ignore[arg-type]
+        totals=totals,
         source_pipeline="a",
         raw_text=raw_text[:500] if raw_text else None,
         extraction_confidence=0.9,
     )
 
 
-def _parse_header(response: str) -> dict:
+def _parse_header(response: str) -> dict[str, Any]:
     """Parse LLM header response into a dict.  Stub for JSON parsing."""
     import json
+
     try:
-        return json.loads(response)
+        parsed: dict[str, Any] = json.loads(response)
+        return parsed
     except json.JSONDecodeError:
         return {"supplier_name": "Unknown"}
 
@@ -87,6 +91,7 @@ def _parse_header(response: str) -> dict:
 def _parse_line_items(response: str) -> list[LineItem]:
     """Parse LLM line items response.  Stub for JSON parsing."""
     import json
+
     try:
         items = json.loads(response)
         return [LineItem.model_validate(item) for item in items]
@@ -94,11 +99,13 @@ def _parse_line_items(response: str) -> list[LineItem]:
         return []
 
 
-def _parse_totals(response: str) -> dict:
+def _parse_totals(response: str) -> dict[str, Any]:
     """Parse LLM totals response.  Stub for JSON parsing."""
     import json
+
     try:
-        return json.loads(response)
+        parsed: dict[str, Any] = json.loads(response)
+        return parsed
     except json.JSONDecodeError:
         return {}
 

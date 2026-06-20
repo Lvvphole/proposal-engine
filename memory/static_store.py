@@ -6,10 +6,9 @@ extraction template hints.
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import Any
-import json
-
 
 _DATA_DIR = Path(__file__).parent / "data"
 _SUPPLIER_CATALOG: dict[str, Any] = {}

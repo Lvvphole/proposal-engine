@@ -78,12 +78,14 @@ def prompt_for_label(text: str, suite: str) -> dict | None:
             if len(parts) != 4:
                 print("  Expected 4 fields separated by |")
                 continue
-            items.append({
-                "description": parts[0],
-                "quantity": float(parts[1]),
-                "unit_price": float(parts[2]),
-                "extended_price": float(parts[3]),
-            })
+            items.append(
+                {
+                    "description": parts[0],
+                    "quantity": float(parts[1]),
+                    "unit_price": float(parts[2]),
+                    "extended_price": float(parts[3]),
+                }
+            )
 
         if not items:
             print("Skipped.")
@@ -106,7 +108,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Label supplier quote PDFs for golden datasets")
     parser.add_argument("pdf_path", type=Path, help="Path to the PDF file")
     parser.add_argument("--suite", required=True, choices=["classifier", "line_items", "recovery"])
-    parser.add_argument("--output", type=Path, default=None, help="Output .jsonl file (default: eval/goldens/<suite>_v1.jsonl)")
+    parser.add_argument(
+        "--output",
+        type=Path,
+        default=None,
+        help="Output .jsonl file (default: eval/goldens/<suite>_v1.jsonl)",
+    )
     args = parser.parse_args()
 
     if not args.pdf_path.exists():
