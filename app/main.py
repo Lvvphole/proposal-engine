@@ -11,6 +11,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from app.api.contractors import router as contractors_router
 from app.api.events import events_router
 from app.api.routes import router
 from core.db import init_db
@@ -48,6 +49,7 @@ app.add_middleware(
 )
 
 app.include_router(router, prefix="/api")
+app.include_router(contractors_router, prefix="/api")
 app.include_router(events_router, prefix="/api")
 
 

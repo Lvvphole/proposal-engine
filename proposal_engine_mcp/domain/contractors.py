@@ -1,24 +1,16 @@
-"""Contractor domain models for MCP server."""
+"""Contractor domain models for MCP server.
+
+``ContractorProfile`` is the canonical contract defined in
+``contracts.contractor`` and re-exported here for convenience.
+"""
 
 from __future__ import annotations
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
+from contracts.contractor import ContractorProfile
 
-class ContractorProfile(BaseModel):
-    """A contractor's configuration for proposal generation."""
-
-    id: str
-    name: str
-    company: str = ""
-    default_markup_pct: float = Field(0.20, ge=0.0, le=1.0)
-    payment_terms: str = "Due on completion"
-    license_number: str = ""
-    phone: str = ""
-    email: str = ""
-
-    # Markup overrides by material category
-    category_markups: dict[str, float] = Field(default_factory=dict)
+__all__ = ["ContractorProfile", "ContractorSummary"]
 
 
 class ContractorSummary(BaseModel):

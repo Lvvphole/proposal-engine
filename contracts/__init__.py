@@ -8,6 +8,7 @@ never loosen the contract to match bad data.
 """
 
 from contracts.classifier import ClassificationResult, QuoteFormat
+from contracts.contractor import ContractorProfile
 from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.errors import (
     BudgetExceededError,
@@ -35,6 +36,7 @@ __all__ = [
     "TotalsData",
     "ClassificationResult",
     "QuoteFormat",
+    "ContractorProfile",
     "ReviewDecision",
     "ReviewVerdict",
     "ContractViolation",

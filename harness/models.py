@@ -1,14 +1,15 @@
-"""ORM model for persisting Envelopes to the database."""
+"""ORM models for persisting Envelopes and Contractors to the database."""
 
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import UTC, datetime
 
 from sqlalchemy import DateTime, String, Text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
+from contracts.contractor import ContractorProfile
 from contracts.envelope import Envelope
 from core.db import Base
 
@@ -83,3 +84,62 @@ async def list_envelopes(
     result = await session.execute(stmt)
     rows = result.scalars().all()
     return [r.to_domain() for r in rows]
+
+
+class ContractorRow(Base):
+    __tablename__ = "contractors"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    company: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    profile_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
+
+    @classmethod
+    def from_domain(cls, profile: ContractorProfile) -> ContractorRow:
+        now = datetime.now(UTC)
+        return cls(
+            id=profile.id,
+            name=profile.name,
+            company=profile.company,
+            created_at=now,
+            updated_at=now,
+            profile_json=profile.model_dump_json(),
+        )
+
+    def to_domain(self) -> ContractorProfile:
+        return ContractorProfile.model_validate(json.loads(self.profile_json))
+
+    def sync_from_domain(self, profile: ContractorProfile) -> None:
+        self.name = profile.name
+        self.company = profile.company
+        self.updated_at = datetime.now(UTC)
+        self.profile_json = profile.model_dump_json()
+
+
+async def save_contractor(profile: ContractorProfile, session: AsyncSession) -> None:
+    """Upsert a contractor profile to the database."""
+    existing = await session.get(ContractorRow, profile.id)
+    if existing is None:
+        session.add(ContractorRow.from_domain(profile))
+    else:
+        existing.sync_from_domain(profile)
+    await session.commit()
+
+
+async def load_contractor(contractor_id: str, session: AsyncSession) -> ContractorProfile | None:
+    """Load a contractor profile by ID, returning None if not found."""
+    row = await session.get(ContractorRow, contractor_id)
+    if row is None:
+        return None
+    return row.to_domain()
+
+
+async def list_contractor_profiles(
+    session: AsyncSession, *, limit: int = 100
+) -> list[ContractorProfile]:
+    """List contractor profiles, most recently updated first."""
+    stmt = select(ContractorRow).order_by(ContractorRow.updated_at.desc()).limit(limit)
+    result = await session.execute(stmt)
+    return [r.to_domain() for r in result.scalars().all()]

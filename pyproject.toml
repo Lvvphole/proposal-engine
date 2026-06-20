@@ -64,7 +64,7 @@ select = ["E", "F", "I", "N", "W", "UP", "B", "A", "SIM"]
 # Tests use descriptive Job-numbered class names and set env vars before imports.
 "tests/**" = ["N801", "B017", "E402", "E741"]
 # FastAPI's Depends()/File() in argument defaults is the framework's idiom.
-"app/api/routes.py" = ["B008"]
+"app/api/*.py" = ["B008"]
 # Contract error names are part of the public API and are suffix-free by design.
 "contracts/errors.py" = ["N818"]
 # Extraction prompts are long string literals that must not be reflowed.

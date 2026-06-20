@@ -30,29 +30,36 @@ async def handle(name: str, args: dict) -> dict[str, Any]:
     elif name == "register_contractor":
         import uuid
 
-        cid = str(uuid.uuid4())[:8]
-        from rag.contractor_context import register_contractor
+        from contracts.contractor import ContractorProfile
+        from core.db import _get_session_factory
+        from rag.contractor_context import upsert_contractor
 
-        register_contractor(
-            cid,
-            {
-                "name": args["name"],
-                "company": args.get("company", ""),
-                "markup_rules": {"default_pct": args.get("default_markup_pct", 0.20)},
-                "payment_terms": args.get("payment_terms", "Due on completion"),
-            },
+        cid = str(uuid.uuid4())[:8]
+        profile = ContractorProfile(
+            id=cid,
+            name=args["name"],
+            company=args.get("company", ""),
+            default_markup_pct=args.get("default_markup_pct", 0.20),
+            payment_terms=args.get("payment_terms", "Due on completion"),
         )
+        async with _get_session_factory()() as session:
+            await upsert_contractor(profile, session)
         return {"contractor_id": cid, "name": args["name"]}
 
     elif name == "list_contractors":
+        from core.db import _get_session_factory
         from rag.contractor_context import list_contractors
 
-        return {"contractors": list_contractors()}
+        async with _get_session_factory()() as session:
+            profiles = await list_contractors(session)
+        return {"contractors": [p.model_dump() for p in profiles]}
 
     elif name == "get_contractor":
+        from core.db import _get_session_factory
         from rag.contractor_context import get_context
 
-        return get_context(args["contractor_id"])
+        async with _get_session_factory()() as session:
+            return await get_context(args["contractor_id"], session)
 
     elif name == "register_supplier":
         from rag.supplier_catalog import register_supplier
