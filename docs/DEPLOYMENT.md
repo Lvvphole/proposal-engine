@@ -72,14 +72,47 @@ to ECR, runs migrations, then forces a new ECS deployment.
 
 ### Infrastructure (Terraform)
 
-`infra/terraform/` provisions the VPC, ECS cluster, S3 document bucket, IAM,
-and Secrets Manager entries. **Note:** the Terraform currently defines the
-cluster but not the ECS services, task definitions, ALB, or ECR repos that
-`deploy.yml` targets — those must be added before the first deploy will
-succeed. See [`infra/terraform/PLAN.md`](../infra/terraform/PLAN.md) for the
-resource-by-resource plan to close this gap (and the MCP-transport decision it
-depends on). The database is **not** in Terraform (it's Supabase); store the
-`DATABASE_URL` in the `database-url` secret and inject it into the task.
+`infra/terraform/` provisions the full backend: VPC, ECS cluster + **Fargate
+service + task definition**, **ALB + target group + listeners**, **ECR repo**,
+CloudWatch logs, IAM roles, and Secrets Manager entries. The database is **not**
+in Terraform (it's Supabase) — its connection string lives in the `database-url`
+secret and is injected into the task as `DATABASE_URL`.
+
+Key variables (`variables.tf`): `api_certificate_arn` (set to an ACM cert ARN
+for HTTPS; empty = HTTP-only MVP), `cors_origins` (the Vercel URL), plus
+`api_desired_count` / `api_cpu` / `api_memory` for sizing.
+
+The MCP server is **stdio-only** and is intentionally not deployed as a service.
+
+#### First-time apply runbook
+
+```bash
+# 1. Populate the secret values (Terraform only creates the containers).
+aws secretsmanager put-secret-value \
+  --secret-id proposal-engine/production/anthropic-api-key --secret-string "sk-ant-..."
+aws secretsmanager put-secret-value \
+  --secret-id proposal-engine/production/database-url \
+  --secret-string "postgresql://postgres:...@db.<ref>.supabase.co:5432/postgres"
+
+cd infra/terraform
+terraform init
+
+# 2. Create the ECR repo first so the image has a push target.
+terraform apply -target=aws_ecr_repository.api
+
+# 3. Push the first image + run migrations + deploy (push to main, or run
+#    deploy.yml manually). build-and-push tags :latest, which the task def uses.
+
+# 4. Apply the rest (ALB, ECS service, logs, roles).
+terraform apply
+
+# 5. Smoke test, then point the frontend at the ALB.
+curl http://$(terraform output -raw api_alb_dns_name)/health   # {"status":"healthy"}
+```
+
+Then set Vercel's `API_PROXY_TARGET` (and the backend `CORS_ORIGINS`) to the
+ALB URL (`terraform output api_alb_dns_name`) and upload a quote through the
+Review Surface to confirm the end-to-end path.
 
 ## Local development
 

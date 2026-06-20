@@ -1,7 +1,8 @@
-# Backend (API + MCP) deploys to AWS ECS. The Next.js frontend is hosted on
-# Vercel and deploys via Vercel's own Git integration (root directory:
-# `frontend/`), so it is intentionally not built here. The database is
-# Supabase Postgres; migrations run in the `migrate` job below.
+# The API deploys to AWS ECS Fargate. The MCP server is stdio-only and is not
+# deployed as a service (run it locally for Claude Desktop/Code). The Next.js
+# frontend is hosted on Vercel via its own Git integration (root directory:
+# `frontend/`), so it is intentionally not built here. The database is Supabase
+# Postgres; migrations run in the `migrate` job below.
 name: Deploy
 
 on:
@@ -39,13 +40,6 @@ jobs:
             -t ${{ steps.ecr-login.outputs.registry }}/proposal-engine-api:latest .
           docker push ${{ steps.ecr-login.outputs.registry }}/proposal-engine-api --all-tags
 
-      - name: Build and push MCP image
-        run: |
-          docker build -f infra/Dockerfile --target mcp \
-            -t ${{ steps.ecr-login.outputs.registry }}/proposal-engine-mcp:${{ github.sha }} \
-            -t ${{ steps.ecr-login.outputs.registry }}/proposal-engine-mcp:latest .
-          docker push ${{ steps.ecr-login.outputs.registry }}/proposal-engine-mcp --all-tags
-
   migrate:
     needs: build-and-push
     runs-on: ubuntu-latest
@@ -65,14 +59,19 @@ jobs:
   deploy:
     needs: migrate
     runs-on: ubuntu-latest
+    permissions:
+      id-token: write
+      contents: read
     steps:
-      - name: Deploy to ECS
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: us-east-1
+
+      - name: Deploy API to ECS
         run: |
           aws ecs update-service \
             --cluster proposal-engine-production \
             --service proposal-engine-api \
-            --force-new-deployment
-          aws ecs update-service \
-            --cluster proposal-engine-production \
-            --service proposal-engine-mcp \
             --force-new-deployment
