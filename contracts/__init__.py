@@ -12,10 +12,12 @@ from contracts.contractor import ContractorProfile
 from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.errors import (
     BudgetExceededError,
+    ClassificationError,
     ContextWindowExceededError,
     ContractViolation,
     ExtractionError,
     PolicyViolationError,
+    RecoveryExhaustedError,
     ValidationError,
 )
 from contracts.events import DomainEvent, EventKind
@@ -46,6 +48,8 @@ __all__ = [
     "ExtractionError",
     "ValidationError",
     "BudgetExceededError",
+    "ClassificationError",
+    "RecoveryExhaustedError",
     "PolicyViolationError",
     "ContextWindowExceededError",
     "DomainEvent",
