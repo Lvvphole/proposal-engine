@@ -70,6 +70,21 @@ to ECR, runs migrations, then forces a new ECS deployment.
 | `ANTHROPIC_API_KEY` | LLM access (also needed by the migrate job) |
 | `DATABASE_URL` | Supabase connection string (migrate job) |
 
+### Authentication (Supabase JWT)
+
+The API verifies Supabase access tokens when `AUTH_ENABLED=true`, deriving the
+user from the token's `sub` and scoping quotes/contractors to that user. It is
+**off by default** so local dev and the current deploy keep working. To turn it
+on in production:
+
+1. Set `AUTH_ENABLED=true` and `SUPABASE_JWT_SECRET` (Supabase → Project
+   Settings → API → JWT Secret) on the API task (inject the secret like the
+   others).
+2. **Wire frontend login first** — the Next.js app must sign users in with
+   Supabase Auth and send the access token as `Authorization: Bearer <jwt>` on
+   `/api/*` calls. Until that lands, enabling auth will 401 the frontend. (This
+   is the immediate next step after this change.)
+
 ### Infrastructure (Terraform)
 
 `infra/terraform/` provisions the full backend: VPC, ECS cluster + **Fargate

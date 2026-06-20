@@ -13,6 +13,7 @@ from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.api.auth import Principal, get_current_principal, tenancy_owner
 from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.events import DomainEvent, EventKind
 from core.db import get_session
@@ -21,6 +22,20 @@ from pipelines.proposal_renderer import render_proposal_html
 
 logger = structlog.get_logger()
 router = APIRouter()
+
+
+async def _owned_envelope(
+    envelope_id: str, session: AsyncSession, principal: Principal
+) -> Envelope:
+    """Load an envelope, 404-ing if it's missing or owned by another user.
+
+    A cross-owner request returns 404 (not 403) so we don't leak existence.
+    """
+    envelope = await load_envelope(envelope_id, session)
+    owner = tenancy_owner(principal)
+    if envelope is None or (owner is not None and envelope.owner_id != owner):
+        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    return envelope
 
 
 class SubmitQuoteResponse(BaseModel):
@@ -48,6 +63,7 @@ async def submit_quote(
     file: UploadFile = File(...),
     contractor_id: str | None = Form(None),
     session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
 ):
     """Submit a supplier quote document for processing."""
     content = await file.read()
@@ -58,6 +74,7 @@ async def submit_quote(
         source_content_type=file.content_type or "application/octet-stream",
         source_bytes_b64=content_b64,
         contractor_id=contractor_id,
+        owner_id=tenancy_owner(principal),
     )
 
     await save_envelope(envelope, session)
@@ -90,11 +107,10 @@ async def _dispatch_pipeline(envelope: Envelope) -> None:
 async def get_quote_status(
     envelope_id: str,
     session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
 ):
     """Check the processing status of a submitted quote."""
-    envelope = await load_envelope(envelope_id, session)
-    if envelope is None:
-        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    envelope = await _owned_envelope(envelope_id, session, principal)
 
     line_item_count = None
     total = None
@@ -120,9 +136,12 @@ async def list_quotes(
     status: str | None = None,
     limit: int = 20,
     session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
 ):
     """List recent quote submissions with optional status filter."""
-    envelopes = await list_envelopes(session, status=status, limit=limit)
+    envelopes = await list_envelopes(
+        session, status=status, owner_id=tenancy_owner(principal), limit=limit
+    )
     return {
         "quotes": [
             {"envelope_id": e.id, "status": e.status, "filename": e.source_filename}
@@ -136,15 +155,14 @@ async def list_quotes(
 async def get_quote_extraction(
     envelope_id: str,
     session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
 ):
     """Return the extracted data for the Review Surface.
 
     Available once extraction has run (status ``review_pending`` onward).
     Returns header, line items, totals, and a quality score.
     """
-    envelope = await load_envelope(envelope_id, session)
-    if envelope is None:
-        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    envelope = await _owned_envelope(envelope_id, session, principal)
     if envelope.extraction is None:
         raise HTTPException(
             status_code=409,
@@ -166,15 +184,14 @@ async def get_quote_extraction(
 async def get_quote_proposal(
     envelope_id: str,
     session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
 ):
     """Return the generated contractor proposal (priced with markup + tax).
 
     Available once the proposal builder has run (status ``review_pending``
     onward).
     """
-    envelope = await load_envelope(envelope_id, session)
-    if envelope is None:
-        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    envelope = await _owned_envelope(envelope_id, session, principal)
     if envelope.proposal is None:
         raise HTTPException(
             status_code=409,
@@ -187,6 +204,7 @@ async def get_quote_proposal(
 async def get_proposal_document(
     envelope_id: str,
     session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
 ):
     """Render the priced proposal as a printable, customer-ready HTML document.
 
@@ -195,9 +213,7 @@ async def get_proposal_document(
     """
     from rag.contractor_context import get_profile
 
-    envelope = await load_envelope(envelope_id, session)
-    if envelope is None:
-        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    envelope = await _owned_envelope(envelope_id, session, principal)
     if envelope.proposal is None:
         raise HTTPException(
             status_code=409,
@@ -217,6 +233,7 @@ async def submit_review(
     envelope_id: str,
     body: ReviewRequest,
     session: AsyncSession = Depends(get_session),
+    principal: Principal = Depends(get_current_principal),
 ):
     """Submit a human review decision for a proposal."""
     from contracts.review import ReviewVerdict
@@ -228,9 +245,7 @@ async def submit_review(
     if verdict not in [v.value for v in ReviewVerdict]:
         raise HTTPException(status_code=400, detail=f"Invalid verdict: {verdict}")
 
-    envelope = await load_envelope(envelope_id, session)
-    if envelope is None:
-        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    envelope = await _owned_envelope(envelope_id, session, principal)
 
     if envelope.status != EnvelopeStatus.REVIEW_PENDING:
         raise HTTPException(

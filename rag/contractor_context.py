@@ -56,6 +56,8 @@ async def get_context(contractor_id: str, session: AsyncSession) -> dict[str, An
     return profile.to_context()
 
 
-async def list_contractors(session: AsyncSession) -> list[ContractorProfile]:
-    """List all stored contractor profiles."""
-    return await list_contractor_profiles(session)
+async def list_contractors(
+    session: AsyncSession, *, owner_id: str | None = None
+) -> list[ContractorProfile]:
+    """List stored contractor profiles, optionally scoped to an owner."""
+    return await list_contractor_profiles(session, owner_id=owner_id)

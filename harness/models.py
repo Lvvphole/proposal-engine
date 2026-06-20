@@ -24,6 +24,7 @@ class EnvelopeRow(Base):
     source_filename: Mapped[str | None] = mapped_column(String(255), nullable=True)
     source_content_type: Mapped[str | None] = mapped_column(String(128), nullable=True)
     contractor_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+    owner_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     payload_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
 
     @classmethod
@@ -36,6 +37,7 @@ class EnvelopeRow(Base):
             source_filename=envelope.source_filename,
             source_content_type=envelope.source_content_type,
             contractor_id=envelope.contractor_id,
+            owner_id=envelope.owner_id,
             payload_json=envelope.model_dump_json(exclude={"source_bytes_b64"}),
         )
 
@@ -49,6 +51,7 @@ class EnvelopeRow(Base):
         self.source_filename = envelope.source_filename
         self.source_content_type = envelope.source_content_type
         self.contractor_id = envelope.contractor_id
+        self.owner_id = envelope.owner_id
         self.payload_json = envelope.model_dump_json(exclude={"source_bytes_b64"})
 
 
@@ -75,12 +78,15 @@ async def list_envelopes(
     session: AsyncSession,
     *,
     status: str | None = None,
+    owner_id: str | None = None,
     limit: int = 20,
 ) -> list[Envelope]:
-    """List envelopes with optional status filter."""
+    """List envelopes, optionally filtered by status and/or owner."""
     stmt = select(EnvelopeRow).order_by(EnvelopeRow.updated_at.desc()).limit(limit)
     if status is not None:
         stmt = stmt.where(EnvelopeRow.status == status)
+    if owner_id is not None:
+        stmt = stmt.where(EnvelopeRow.owner_id == owner_id)
     result = await session.execute(stmt)
     rows = result.scalars().all()
     return [r.to_domain() for r in rows]
@@ -92,6 +98,7 @@ class ContractorRow(Base):
     id: Mapped[str] = mapped_column(String(36), primary_key=True)
     name: Mapped[str] = mapped_column(String(255), nullable=False)
     company: Mapped[str] = mapped_column(String(255), nullable=False, default="")
+    owner_id: Mapped[str | None] = mapped_column(String(128), nullable=True, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     profile_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
@@ -103,6 +110,7 @@ class ContractorRow(Base):
             id=profile.id,
             name=profile.name,
             company=profile.company,
+            owner_id=profile.owner_id,
             created_at=now,
             updated_at=now,
             profile_json=profile.model_dump_json(),
@@ -114,6 +122,7 @@ class ContractorRow(Base):
     def sync_from_domain(self, profile: ContractorProfile) -> None:
         self.name = profile.name
         self.company = profile.company
+        self.owner_id = profile.owner_id
         self.updated_at = datetime.now(UTC)
         self.profile_json = profile.model_dump_json()
 
@@ -137,9 +146,11 @@ async def load_contractor(contractor_id: str, session: AsyncSession) -> Contract
 
 
 async def list_contractor_profiles(
-    session: AsyncSession, *, limit: int = 100
+    session: AsyncSession, *, owner_id: str | None = None, limit: int = 100
 ) -> list[ContractorProfile]:
-    """List contractor profiles, most recently updated first."""
+    """List contractor profiles, most recently updated first, optionally by owner."""
     stmt = select(ContractorRow).order_by(ContractorRow.updated_at.desc()).limit(limit)
+    if owner_id is not None:
+        stmt = stmt.where(ContractorRow.owner_id == owner_id)
     result = await session.execute(stmt)
     return [r.to_domain() for r in result.scalars().all()]
