@@ -53,8 +53,8 @@ def record_extraction(name: str, accuracy: float) -> None:
     if entry:
         count = entry["extraction_count"] + 1
         entry["avg_accuracy"] = (
-            (entry["avg_accuracy"] * entry["extraction_count"] + accuracy) / count
-        )
+            entry["avg_accuracy"] * entry["extraction_count"] + accuracy
+        ) / count
         entry["extraction_count"] = count
 
 

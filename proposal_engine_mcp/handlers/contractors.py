@@ -29,15 +29,20 @@ def register(server: Server) -> None:
             The new contractor profile with generated ID.
         """
         import uuid
+
         contractor_id = str(uuid.uuid4())[:8]
 
         from rag.contractor_context import register_contractor as reg
-        reg(contractor_id, {
-            "name": name,
-            "company": company,
-            "markup_rules": {"default_pct": default_markup_pct},
-            "payment_terms": payment_terms,
-        })
+
+        reg(
+            contractor_id,
+            {
+                "name": name,
+                "company": company,
+                "markup_rules": {"default_pct": default_markup_pct},
+                "payment_terms": payment_terms,
+            },
+        )
 
         return {
             "contractor_id": contractor_id,
@@ -50,10 +55,12 @@ def register(server: Server) -> None:
     async def list_contractors() -> dict[str, Any]:
         """List all registered contractors."""
         from rag.contractor_context import list_contractors as lc
+
         return {"contractors": lc()}
 
     @server.tool("get_contractor")
     async def get_contractor(contractor_id: str) -> dict[str, Any]:
         """Get a contractor's full profile and context."""
         from rag.contractor_context import get_context
+
         return get_context(contractor_id)

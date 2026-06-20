@@ -36,11 +36,14 @@ def get_context(contractor_id: str) -> dict[str, Any]:
 
     return {
         "contractor_id": contractor_id,
-        "markup_rules": profile.get("markup_rules", {
-            "default_pct": 0.20,
-            "materials_pct": 0.15,
-            "labor_pct": 0.25,
-        }),
+        "markup_rules": profile.get(
+            "markup_rules",
+            {
+                "default_pct": 0.20,
+                "materials_pct": 0.15,
+                "labor_pct": 0.25,
+            },
+        ),
         "payment_terms": profile.get("payment_terms", "Due on completion"),
         "branding": profile.get("branding", {}),
         "history_summary": profile.get("history_summary", "No prior proposals on file."),

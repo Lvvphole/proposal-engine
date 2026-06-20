@@ -17,9 +17,9 @@ from pydantic import BaseModel, Field
 class QuoteFormat(StrEnum):
     """The three canonical quote formats we handle."""
 
-    STRUCTURED_TABLE = "structured_table"      # Pipeline A: clean tabular data
-    SEMI_STRUCTURED = "semi_structured"        # Pipeline B: mixed layout
-    UNSTRUCTURED_FREETEXT = "unstructured"     # Pipeline C: free-form text/images
+    STRUCTURED_TABLE = "structured_table"  # Pipeline A: clean tabular data
+    SEMI_STRUCTURED = "semi_structured"  # Pipeline B: mixed layout
+    UNSTRUCTURED_FREETEXT = "unstructured"  # Pipeline C: free-form text/images
 
 
 class ClassificationResult(BaseModel):

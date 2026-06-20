@@ -8,14 +8,14 @@ from __future__ import annotations
 import base64
 
 import structlog
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException, UploadFile, File, Form
+from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.events import DomainEvent, EventKind
 from core.db import get_session
-from harness.models import load_envelope, list_envelopes, save_envelope
+from harness.models import list_envelopes, load_envelope, save_envelope
 
 logger = structlog.get_logger()
 router = APIRouter()

@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 
 from sqlalchemy import DateTime, String, Text, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import Mapped, mapped_column
 
-from contracts.envelope import Envelope, EnvelopeStatus
+from contracts.envelope import Envelope
 from core.db import Base
 
 
@@ -26,7 +26,7 @@ class EnvelopeRow(Base):
     payload_json: Mapped[str] = mapped_column(Text, nullable=False, default="{}")
 
     @classmethod
-    def from_domain(cls, envelope: Envelope) -> "EnvelopeRow":
+    def from_domain(cls, envelope: Envelope) -> EnvelopeRow:
         return cls(
             id=envelope.id,
             status=envelope.status,

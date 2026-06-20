@@ -6,6 +6,8 @@ few-shot examples, mode directives, and extra instructions are layered on top.
 
 from __future__ import annotations
 
+from typing import Any
+
 _BASE_PROMPTS: dict[str, str] = {
     "classifier": (
         "You are a document classifier specializing in supplier quotes. "
@@ -30,7 +32,9 @@ _BASE_PROMPTS: dict[str, str] = {
 }
 
 _MODE_DIRECTIVES: dict[str, str] = {
-    "production": "Operate at full accuracy. Take the most conservative interpretation of ambiguous data.",
+    "production": (
+        "Operate at full accuracy. Take the most conservative interpretation of ambiguous data."
+    ),
     "debug": "Include verbose reasoning in your response. Explain each decision.",
     "eval": "This is an evaluation run. Return confidence scores for every extracted field.",
 }
@@ -40,7 +44,7 @@ def assemble(
     agent: str,
     *,
     supplier_context: str | None = None,
-    contractor_prefs: dict | None = None,
+    contractor_prefs: dict[str, Any] | None = None,
     few_shot_examples: list[str] | None = None,
     mode: str = "production",
     extra: str | None = None,

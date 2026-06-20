@@ -12,10 +12,10 @@ from __future__ import annotations
 
 import structlog
 from anthropic import AsyncAnthropic
+from anthropic.types import MessageParam
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from contracts.envelope import Envelope
-from contracts.errors import BudgetExceededError
 from core.config import get_config
 
 logger = structlog.get_logger()
@@ -33,7 +33,7 @@ def _get_client() -> AsyncAnthropic:
 async def call_llm(
     *,
     system: str,
-    messages: list[dict],
+    messages: list[MessageParam],
     model: str | None = None,
     max_tokens: int | None = None,
     envelope: Envelope | None = None,

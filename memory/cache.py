@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import hashlib
 from collections import OrderedDict
-from datetime import datetime, timezone, timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
 
@@ -29,7 +29,7 @@ class TTLCache:
         if key not in self._store:
             return None
         value, timestamp = self._store[key]
-        if datetime.now(timezone.utc) - timestamp > self._ttl:
+        if datetime.now(UTC) - timestamp > self._ttl:
             del self._store[key]
             return None
         self._store.move_to_end(key)
@@ -38,7 +38,7 @@ class TTLCache:
     def set(self, key: str, value: Any) -> None:
         if key in self._store:
             self._store.move_to_end(key)
-        self._store[key] = (value, datetime.now(timezone.utc))
+        self._store[key] = (value, datetime.now(UTC))
         if len(self._store) > self._maxsize:
             self._store.popitem(last=False)
 

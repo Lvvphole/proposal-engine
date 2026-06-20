@@ -10,13 +10,13 @@ from __future__ import annotations
 import structlog
 
 from contracts.envelope import Envelope, EnvelopeStatus
-from contracts.events import DomainEvent, EventKind
 from contracts.errors import BudgetExceededError, RecoveryExhaustedError
+from contracts.events import DomainEvent, EventKind
 from core import message_bus
 from harness.budget import check_budget
 from harness.escalation import escalate
 from harness.instrumentation import increment, timer
-from harness.tracing import start_span, record_error
+from harness.tracing import record_error, start_span
 from pipelines.pipeline_a.run import run as run_pipeline_a
 from pipelines.pipeline_b.run import run as run_pipeline_b
 from pipelines.pipeline_c.run import run as run_pipeline_c
@@ -36,6 +36,7 @@ async def _checkpoint(envelope: Envelope) -> None:
     try:
         from core.db import _get_session_factory
         from harness.models import save_envelope
+
         async with _get_session_factory()() as session:
             await save_envelope(envelope, session)
     except Exception as exc:
@@ -54,7 +55,7 @@ async def process_envelope(envelope: Envelope) -> Envelope:
 
     Returns the envelope with updated status and populated extraction data.
     """
-    with start_span("orchestrator.process_envelope", envelope_id=envelope.id) as root_span:
+    with start_span("orchestrator.process_envelope", envelope_id=envelope.id) as root_span:  # noqa: SIM117
         with timer("orchestrator.total"):
             try:
                 # 1. Budget pre-check

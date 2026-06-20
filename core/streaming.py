@@ -4,22 +4,23 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 
 import structlog
 from anthropic import AsyncAnthropic
+from anthropic.types import MessageParam
 
 from core.config import get_config
 
 logger = structlog.get_logger()
 
-_envelope_queues: dict[str, list[asyncio.Queue]] = {}
+_envelope_queues: dict[str, list[asyncio.Queue[str]]] = {}
 
 
 async def call_llm_streaming(
     *,
     system: str,
-    messages: list[dict],
+    messages: list[MessageParam],
     model: str | None = None,
     max_tokens: int | None = None,
     agent_name: str = "unknown",
@@ -63,10 +64,10 @@ class SSEBridge:
         """Register the bridge as a message bus handler."""
         if cls._installed:
             return
-        from contracts.events import EventKind
+        from contracts.events import DomainEvent, EventKind
         from core import message_bus
 
-        async def _handler(event) -> None:
+        async def _handler(event: DomainEvent) -> None:
             envelope_id = event.metadata.get("envelope_id") if event.metadata else None
             if envelope_id is None:
                 return
@@ -82,14 +83,14 @@ class SSEBridge:
         cls._installed = True
 
     @classmethod
-    def subscribe(cls, envelope_id: str) -> asyncio.Queue:
+    def subscribe(cls, envelope_id: str) -> asyncio.Queue[str]:
         """Return a queue that will receive SSE lines for the given envelope."""
-        q: asyncio.Queue = asyncio.Queue()
+        q: asyncio.Queue[str] = asyncio.Queue()
         _envelope_queues.setdefault(envelope_id, []).append(q)
         return q
 
     @classmethod
-    def unsubscribe(cls, envelope_id: str, queue: asyncio.Queue) -> None:
+    def unsubscribe(cls, envelope_id: str, queue: asyncio.Queue[str]) -> None:
         queues = _envelope_queues.get(envelope_id, [])
         if queue in queues:
             queues.remove(queue)
@@ -119,7 +120,7 @@ async def sse_event_generator(
                 yield line
                 if '"approved"' in line or '"rejected"' in line:
                     break
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 yield ": heartbeat\n\n"
     finally:
         SSEBridge.unsubscribe(envelope_id, queue)

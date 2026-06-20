@@ -22,9 +22,7 @@ class Config(BaseSettings):
     anthropic_api_key: str = Field(..., alias="ANTHROPIC_API_KEY")
 
     # ── Database ─────────────────────────────────────────────────────
-    database_url: str = Field(
-        "sqlite:///./proposal_engine.db", alias="DATABASE_URL"
-    )
+    database_url: str = Field("sqlite:///./proposal_engine.db", alias="DATABASE_URL")
 
     # ── LLM Defaults ────────────────────────────────────────────────
     default_model: str = Field("claude-sonnet-4-20250514", alias="DEFAULT_MODEL")
@@ -33,9 +31,7 @@ class Config(BaseSettings):
     max_tokens: int = Field(4096, alias="MAX_TOKENS")
 
     # ── Budget ───────────────────────────────────────────────────────
-    budget_daily_limit_usd: Decimal = Field(
-        Decimal("25.00"), alias="BUDGET_DAILY_LIMIT_USD"
-    )
+    budget_daily_limit_usd: Decimal = Field(Decimal("25.00"), alias="BUDGET_DAILY_LIMIT_USD")
     budget_per_envelope_limit_usd: Decimal = Field(
         Decimal("2.00"), alias="BUDGET_PER_ENVELOPE_LIMIT_USD"
     )
@@ -52,4 +48,4 @@ class Config(BaseSettings):
 @lru_cache(maxsize=1)
 def get_config() -> Config:
     """Singleton config accessor."""
-    return Config()  # type: ignore[call-arg]
+    return Config()

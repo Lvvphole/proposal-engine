@@ -9,7 +9,7 @@ audit events at each stage.
 from __future__ import annotations
 
 import uuid
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from enum import StrEnum
 
 from pydantic import BaseModel, Field
@@ -35,8 +35,8 @@ class Envelope(BaseModel):
 
     id: str = Field(default_factory=lambda: str(uuid.uuid4()))
     status: EnvelopeStatus = EnvelopeStatus.RECEIVED
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    created_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(UTC))
 
     # Source material
     source_filename: str | None = None
@@ -58,7 +58,7 @@ class Envelope(BaseModel):
     def advance(self, new_status: EnvelopeStatus, event: DomainEvent) -> None:
         """Move the envelope to a new status and record the event."""
         self.status = new_status
-        self.updated_at = datetime.now(timezone.utc)
+        self.updated_at = datetime.now(UTC)
         self.events.append(event)
 
     @property
