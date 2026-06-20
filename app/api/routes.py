@@ -9,6 +9,7 @@ import base64
 
 import structlog
 from fastapi import APIRouter, BackgroundTasks, Depends, File, Form, HTTPException, UploadFile
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -16,6 +17,7 @@ from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.events import DomainEvent, EventKind
 from core.db import get_session
 from harness.models import list_envelopes, load_envelope, save_envelope
+from pipelines.proposal_renderer import render_proposal_html
 
 logger = structlog.get_logger()
 router = APIRouter()
@@ -179,6 +181,35 @@ async def get_quote_proposal(
             detail=f"Envelope {envelope_id!r} has no proposal yet (status {envelope.status!r})",
         )
     return envelope.proposal.model_dump(mode="json")
+
+
+@router.get("/quotes/{envelope_id}/proposal.html", response_class=HTMLResponse)
+async def get_proposal_document(
+    envelope_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Render the priced proposal as a printable, customer-ready HTML document.
+
+    Available once the proposal has been built; the contractor reviews/prints
+    it (or saves to PDF) to send — nothing is auto-sent.
+    """
+    from rag.contractor_context import get_profile
+
+    envelope = await load_envelope(envelope_id, session)
+    if envelope is None:
+        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    if envelope.proposal is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Envelope {envelope_id!r} has no proposal yet (status {envelope.status!r})",
+        )
+
+    contractor = None
+    if envelope.contractor_id:
+        contractor = await get_profile(envelope.contractor_id, session)
+
+    html = render_proposal_html(envelope.proposal, contractor)
+    return HTMLResponse(content=html)
 
 
 @router.post("/quotes/{envelope_id}/review")
