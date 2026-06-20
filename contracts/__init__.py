@@ -25,6 +25,7 @@ from contracts.extraction import (
     LineItem,
     TotalsData,
 )
+from contracts.proposal import Proposal, ProposalLineItem
 from contracts.review import ReviewDecision, ReviewVerdict
 
 __all__ = [
@@ -37,6 +38,8 @@ __all__ = [
     "ClassificationResult",
     "QuoteFormat",
     "ContractorProfile",
+    "Proposal",
+    "ProposalLineItem",
     "ReviewDecision",
     "ReviewVerdict",
     "ContractViolation",

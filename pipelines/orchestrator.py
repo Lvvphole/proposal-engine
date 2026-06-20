@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import structlog
 
+from contracts.contractor import ContractorProfile
 from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.errors import BudgetExceededError, RecoveryExhaustedError
 from contracts.events import DomainEvent, EventKind
@@ -21,6 +22,7 @@ from pipelines.classifier import classify
 from pipelines.pipeline_a.run import run as run_pipeline_a
 from pipelines.pipeline_b.run import run as run_pipeline_b
 from pipelines.pipeline_c.run import run as run_pipeline_c
+from pipelines.proposal_builder import build_proposal
 from pipelines.validation_gate import validate
 
 logger = structlog.get_logger()
@@ -42,6 +44,22 @@ async def _checkpoint(envelope: Envelope) -> None:
             await save_envelope(envelope, session)
     except Exception as exc:
         logger.warning("checkpoint_failed", envelope_id=envelope.id, error=str(exc))
+
+
+async def _load_contractor(contractor_id: str | None) -> ContractorProfile:
+    """Load the contractor's profile, falling back to defaults when unknown."""
+    if contractor_id:
+        try:
+            from core.db import _get_session_factory
+            from rag.contractor_context import get_profile
+
+            async with _get_session_factory()() as session:
+                profile = await get_profile(contractor_id, session)
+                if profile is not None:
+                    return profile
+        except Exception as exc:
+            logger.warning("contractor_load_failed", contractor_id=contractor_id, error=str(exc))
+    return ContractorProfile(id=contractor_id or "default", name="(default)")
 
 
 async def process_envelope(envelope: Envelope) -> Envelope:
@@ -137,9 +155,23 @@ async def process_envelope(envelope: Envelope) -> Envelope:
                     )
                     increment("validations.failed")
 
+                # 5. Build the contractor proposal (apply markup, tax, terms)
+                with start_span("orchestrator.build_proposal"):
+                    contractor = await _load_contractor(envelope.contractor_id)
+                    envelope.contractor_markup_pct = contractor.default_markup_pct
+                    envelope.proposal = build_proposal(extraction_result, contractor)
+                envelope.events.append(
+                    DomainEvent(
+                        kind=EventKind.PROPOSAL_GENERATED,
+                        agent="proposal_builder",
+                        detail=f"total={envelope.proposal.total}",
+                    )
+                )
+                increment("proposals.generated")
+
                 await _checkpoint(envelope)
 
-                # 5. Route to review
+                # 6. Route to review
                 await message_bus.publish(
                     DomainEvent(
                         kind=EventKind.REVIEW_REQUESTED,

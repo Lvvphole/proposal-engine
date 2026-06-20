@@ -160,6 +160,27 @@ async def get_quote_extraction(
     }
 
 
+@router.get("/quotes/{envelope_id}/proposal")
+async def get_quote_proposal(
+    envelope_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Return the generated contractor proposal (priced with markup + tax).
+
+    Available once the proposal builder has run (status ``review_pending``
+    onward).
+    """
+    envelope = await load_envelope(envelope_id, session)
+    if envelope is None:
+        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    if envelope.proposal is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Envelope {envelope_id!r} has no proposal yet (status {envelope.status!r})",
+        )
+    return envelope.proposal.model_dump(mode="json")
+
+
 @router.post("/quotes/{envelope_id}/review")
 async def submit_review(
     envelope_id: str,

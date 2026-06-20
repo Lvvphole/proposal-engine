@@ -98,6 +98,42 @@ async def test_get_extraction_409_when_not_extracted(session):
 
 
 @pytest.mark.asyncio
+async def test_get_proposal_returns_priced_proposal(session):
+    from app.api.routes import get_quote_proposal
+    from contracts.contractor import ContractorProfile
+    from harness.models import save_envelope
+    from pipelines.proposal_builder import build_proposal
+
+    env = _envelope_with_extraction()
+    env.proposal = build_proposal(
+        env.extraction, ContractorProfile(id="c1", name="Acme", default_markup_pct=0.25)
+    )
+    await save_envelope(env, session)
+
+    result = await get_quote_proposal(env.id, session=session)
+    assert result["supplier_name"] == "ABC Supply"
+    assert result["contractor_id"] == "c1"
+    # 20.00 supplier total marked up 25% → 25.00 subtotal.
+    assert result["subtotal"] == "25.00"
+    assert len(result["line_items"]) == 1
+
+
+@pytest.mark.asyncio
+async def test_get_proposal_409_when_not_built(session):
+    from fastapi import HTTPException
+
+    from app.api.routes import get_quote_proposal
+    from harness.models import save_envelope
+
+    env = _envelope_with_extraction()  # extraction set, but no proposal
+    await save_envelope(env, session)
+
+    with pytest.raises(HTTPException) as exc:
+        await get_quote_proposal(env.id, session=session)
+    assert exc.value.status_code == 409
+
+
+@pytest.mark.asyncio
 async def test_update_contractor_ignores_explicit_null(session):
     from app.api.contractors import ContractorUpdate, update_contractor
     from contracts.contractor import ContractorProfile

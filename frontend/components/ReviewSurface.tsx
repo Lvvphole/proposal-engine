@@ -33,7 +33,19 @@ interface Extraction {
   quality_score: number;
 }
 
-const money = (v: number | null | undefined) =>
+interface Proposal {
+  supplier_name: string;
+  cost_subtotal: string;
+  subtotal: string;
+  markup_amount: string;
+  tax_rate: string;
+  tax_amount: string;
+  total: string;
+  payment_terms: string;
+  delivery_terms: string | null;
+}
+
+const money = (v: number | string | null | undefined) =>
   v === null || v === undefined ? "—" : `$${Number(v).toFixed(2)}`;
 
 export default function ReviewSurface({
@@ -44,6 +56,7 @@ export default function ReviewSurface({
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [extraction, setExtraction] = useState<Extraction | null>(null);
+  const [proposal, setProposal] = useState<Proposal | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -54,6 +67,11 @@ export default function ReviewSurface({
         if (!res.ok) throw new Error(`Failed to load extraction (${res.status})`);
         const data = (await res.json()) as Extraction;
         if (!cancelled) setExtraction(data);
+
+        // The priced proposal is generated alongside extraction; tolerate its
+        // absence rather than failing the whole surface.
+        const pres = await fetch(`/api/quotes/${envelopeId}/proposal`);
+        if (pres.ok && !cancelled) setProposal((await pres.json()) as Proposal);
       } catch (err) {
         if (!cancelled)
           setError(err instanceof Error ? err.message : "Failed to load extraction");
@@ -170,6 +188,39 @@ export default function ReviewSurface({
           </div>
         </div>
       </div>
+
+      {/* Customer Proposal (priced with contractor markup + tax) */}
+      {proposal && (
+        <div className="bg-blue-50 rounded-lg p-4">
+          <h3 className="font-semibold mb-2">Customer Proposal</h3>
+          <div className="space-y-1 text-sm max-w-xs ml-auto">
+            <div className="flex justify-between text-gray-500">
+              <span>Supplier cost:</span>
+              <span>{money(proposal.cost_subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Markup:</span>
+              <span>+{money(proposal.markup_amount)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Subtotal:</span>
+              <span>{money(proposal.subtotal)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Tax ({(Number(proposal.tax_rate) * 100).toFixed(1)}%):</span>
+              <span>{money(proposal.tax_amount)}</span>
+            </div>
+            <div className="flex justify-between font-bold text-base border-t pt-1">
+              <span>Customer total:</span>
+              <span>{money(proposal.total)}</span>
+            </div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Terms: {proposal.payment_terms}
+            {proposal.delivery_terms ? ` · ${proposal.delivery_terms}` : ""}
+          </p>
+        </div>
+      )}
 
       {/* Review Controls */}
       <div>
