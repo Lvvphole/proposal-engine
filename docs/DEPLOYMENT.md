@@ -76,7 +76,9 @@ to ECR, runs migrations, then forces a new ECS deployment.
 and Secrets Manager entries. **Note:** the Terraform currently defines the
 cluster but not the ECS services, task definitions, ALB, or ECR repos that
 `deploy.yml` targets — those must be added before the first deploy will
-succeed. The database is **not** in Terraform (it's Supabase); store the
+succeed. See [`infra/terraform/PLAN.md`](../infra/terraform/PLAN.md) for the
+resource-by-resource plan to close this gap (and the MCP-transport decision it
+depends on). The database is **not** in Terraform (it's Supabase); store the
 `DATABASE_URL` in the `database-url` secret and inject it into the task.
 
 ## Local development

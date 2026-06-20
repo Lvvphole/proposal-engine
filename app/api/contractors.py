@@ -92,7 +92,11 @@ async def update_contractor(
     profile = await get_profile(contractor_id, session)
     if profile is None:
         raise HTTPException(status_code=404, detail=f"Contractor {contractor_id!r} not found")
-    updated = profile.model_copy(update=body.model_dump(exclude_unset=True))
+    # Only apply fields the client actually set, and drop explicit nulls —
+    # the profile's fields are non-nullable, so a null would corrupt the row.
+    changes = {k: v for k, v in body.model_dump(exclude_unset=True).items() if v is not None}
+    # Re-validate the merged result rather than copying unchecked.
+    updated = ContractorProfile.model_validate({**profile.model_dump(), **changes})
     await upsert_contractor(updated, session)
     return updated
 
