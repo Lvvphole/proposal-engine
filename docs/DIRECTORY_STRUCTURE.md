@@ -34,7 +34,9 @@ proposal-engine/
 │   └── pipeline_c_fallback/AGENT.md # Broad-spectrum fallback
 │
 ├── pipelines/                       # PIPELINE IMPLEMENTATIONS
-│   ├── orchestrator.py              # Central control loop
+│   ├── orchestrator.py              # Central control loop (classify → extract → validate)
+│   ├── classifier.py                # Routes a quote to pipeline A/B/C (LLM)
+│   ├── parsing.py                   # Robust JSON extraction + per-row validation
 │   ├── validation_gate.py           # Contract enforcement checks
 │   ├── pipeline_a/run.py            # Structured table extraction
 │   ├── pipeline_b/run.py            # Semi-structured extraction

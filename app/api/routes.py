@@ -59,7 +59,10 @@ async def submit_quote(
     )
 
     await save_envelope(envelope, session)
-    background_tasks.add_task(_dispatch_pipeline, envelope.id)
+    # Pass the in-memory envelope (which still holds source_bytes_b64) to the
+    # background task. Reloading from the DB would lose the bytes — they are
+    # excluded from persistence — leaving extraction with no document to read.
+    background_tasks.add_task(_dispatch_pipeline, envelope)
 
     return SubmitQuoteResponse(
         envelope_id=envelope.id,
@@ -68,21 +71,17 @@ async def submit_quote(
     )
 
 
-async def _dispatch_pipeline(envelope_id: str) -> None:
-    """Background task: load envelope and run through orchestrator."""
+async def _dispatch_pipeline(envelope: Envelope) -> None:
+    """Background task: run the envelope through the orchestrator."""
     from core.db import _get_session_factory
     from pipelines.orchestrator import process_envelope
 
     async with _get_session_factory()() as session:
-        envelope = await load_envelope(envelope_id, session)
-        if envelope is None:
-            logger.error("dispatch_envelope_not_found", envelope_id=envelope_id)
-            return
         try:
             envelope = await process_envelope(envelope)
             await save_envelope(envelope, session)
         except Exception as exc:
-            logger.error("dispatch_failed", envelope_id=envelope_id, error=str(exc))
+            logger.error("dispatch_failed", envelope_id=envelope.id, error=str(exc))
 
 
 @router.get("/quotes/{envelope_id}", response_model=EnvelopeStatusResponse)
