@@ -98,6 +98,26 @@ async def test_get_extraction_409_when_not_extracted(session):
 
 
 @pytest.mark.asyncio
+async def test_update_contractor_ignores_explicit_null(session):
+    from app.api.contractors import ContractorUpdate, update_contractor
+    from contracts.contractor import ContractorProfile
+    from rag.contractor_context import upsert_contractor
+
+    await upsert_contractor(
+        ContractorProfile(id="c1", name="Acme", payment_terms="Net 30"), session
+    )
+
+    # Client sends an explicit null for a non-nullable field plus a real change.
+    body = ContractorUpdate.model_validate({"payment_terms": None, "company": "Acme LLC"})
+    updated = await update_contractor("c1", body, session=session)
+
+    # Null is ignored (keeps prior value); the real change is applied.
+    assert updated.payment_terms == "Net 30"
+    assert updated.company == "Acme LLC"
+    assert updated.name == "Acme"
+
+
+@pytest.mark.asyncio
 async def test_review_accepts_json_body(session):
     from app.api.routes import ReviewRequest, submit_review
     from harness.models import load_envelope, save_envelope
