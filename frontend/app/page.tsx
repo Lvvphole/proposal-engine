@@ -120,15 +120,25 @@ export default function Home() {
           <p className="text-lg text-green-600 font-semibold">
             Proposal approved and ready for delivery.
           </p>
-          <button
-            onClick={() => {
-              setStatus("idle");
-              setEnvelopeId(null);
-            }}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-          >
-            Process Another Quote
-          </button>
+          <div className="mt-4 flex items-center justify-center gap-3">
+            <a
+              href={`/api/quotes/${envelopeId}/proposal.html`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              View / print proposal
+            </a>
+            <button
+              onClick={() => {
+                setStatus("idle");
+                setEnvelopeId(null);
+              }}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Process Another Quote
+            </button>
+          </div>
         </div>
       )}
 
