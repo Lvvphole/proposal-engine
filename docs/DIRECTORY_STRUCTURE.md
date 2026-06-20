@@ -14,6 +14,8 @@ proposal-engine/
 │   ├── __init__.py                  # Public API exports
 │   ├── extraction.py                # LineItem, HeaderData, TotalsData, ExtractionResult
 │   ├── classifier.py                # QuoteFormat, ClassificationResult
+│   ├── contractor.py                # ContractorProfile (markup rules, terms)
+│   ├── proposal.py                  # Proposal, ProposalLineItem (priced output)
 │   ├── envelope.py                  # Envelope (work unit), EnvelopeStatus
 │   ├── events.py                    # DomainEvent, EventKind
 │   ├── review.py                    # ReviewDecision, ReviewVerdict
@@ -37,6 +39,7 @@ proposal-engine/
 │   ├── orchestrator.py              # Central control loop (classify → extract → validate)
 │   ├── classifier.py                # Routes a quote to pipeline A/B/C (LLM)
 │   ├── parsing.py                   # Robust JSON extraction + per-row validation
+│   ├── proposal_builder.py          # Applies contractor markup/tax/terms → Proposal
 │   ├── validation_gate.py           # Contract enforcement checks
 │   ├── pipeline_a/run.py            # Structured table extraction
 │   ├── pipeline_b/run.py            # Semi-structured extraction

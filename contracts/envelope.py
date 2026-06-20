@@ -17,6 +17,7 @@ from pydantic import BaseModel, Field
 from contracts.classifier import ClassificationResult
 from contracts.events import DomainEvent
 from contracts.extraction import ExtractionResult
+from contracts.proposal import Proposal
 
 
 class EnvelopeStatus(StrEnum):
@@ -46,6 +47,7 @@ class Envelope(BaseModel):
     # Pipeline outputs (populated as the envelope moves through stages)
     classification: ClassificationResult | None = None
     extraction: ExtractionResult | None = None
+    proposal: Proposal | None = None
 
     # Contractor context
     contractor_id: str | None = None
