@@ -23,6 +23,8 @@ COPY app/ app/
 COPY proposal_engine_mcp/ proposal_engine_mcp/
 COPY policies/ policies/
 COPY eval/ eval/
+COPY migrations/ migrations/
+COPY alembic.ini alembic.ini
 
 # Production stage
 FROM base AS production

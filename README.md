@@ -37,9 +37,12 @@ See [CLAUDE.md](./CLAUDE.md) for the full architecture overview and development 
 - ✅ Token budget tracking and policy enforcement
 - ✅ Eval framework with golden datasets
 - ✅ MCP server for Claude Desktop / Claude Code integration
-- 🔄 Review Surface (frontend, in progress)
-- 🔄 Contractor preference engine
-- 📋 Deployment automation
+- ✅ Review Surface (Next.js, fetches live extraction + submits decisions)
+- ✅ Contractor preference engine (DB-backed, REST + MCP CRUD)
+- ✅ Database schema via Alembic migrations (Supabase Postgres)
+- 🔄 Deployment: frontend on Vercel, backend on AWS ECS — see
+  [docs/DEPLOYMENT.md](./docs/DEPLOYMENT.md) (ECS service/ALB Terraform still
+  to be added)
 
 ## License
 
