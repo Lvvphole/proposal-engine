@@ -41,8 +41,15 @@ class Config(BaseSettings):
     port: int = Field(8000, alias="PORT")
     debug: bool = Field(False, alias="DEBUG")
 
+    # Comma-separated list of allowed CORS origins (e.g. the Vercel frontend URL).
+    cors_origins: str = Field("http://localhost:3000", alias="CORS_ORIGINS")
+
     # ── MCP ──────────────────────────────────────────────────────────
     mcp_server_port: int = Field(3100, alias="MCP_SERVER_PORT")
+
+    def cors_origin_list(self) -> list[str]:
+        """Parse ``cors_origins`` into a list of trimmed origins."""
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 @lru_cache(maxsize=1)

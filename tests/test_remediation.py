@@ -361,7 +361,7 @@ class TestJob09_ReviewResumePath:
 
     @pytest.mark.asyncio
     async def test_review_approved(self, app_with_db, tmp_path):
-        from app.api.routes import submit_review
+        from app.api.routes import ReviewRequest, submit_review
         from contracts.envelope import Envelope, EnvelopeStatus
         from contracts.events import DomainEvent, EventKind
         from core.db import _get_session_factory, init_db
@@ -377,7 +377,7 @@ class TestJob09_ReviewResumePath:
             await save_envelope(env, session)
 
         async with _get_session_factory()() as session:
-            result = await submit_review(env.id, "approved", session=session)
+            result = await submit_review(env.id, ReviewRequest(verdict="approved"), session=session)
         assert result["verdict"] == "approved"
         assert result["status"] == "approved"
 
@@ -397,17 +397,17 @@ class TestJob09_ReviewResumePath:
         async with _get_session_factory()() as session:
             await save_envelope(env, session)
 
-        from app.api.routes import submit_review
+        from app.api.routes import ReviewRequest, submit_review
 
         async with _get_session_factory()() as session:
-            result = await submit_review(env.id, "rejected", session=session)
+            result = await submit_review(env.id, ReviewRequest(verdict="rejected"), session=session)
         assert result["status"] == "rejected"
 
     @pytest.mark.asyncio
     async def test_review_wrong_status_raises_409(self, app_with_db):
         from fastapi import HTTPException
 
-        from app.api.routes import submit_review
+        from app.api.routes import ReviewRequest, submit_review
         from contracts.envelope import Envelope
         from core.db import _get_session_factory, init_db
         from harness.models import save_envelope
@@ -419,38 +419,42 @@ class TestJob09_ReviewResumePath:
 
         async with _get_session_factory()() as session:
             with pytest.raises(HTTPException) as exc_info:
-                await submit_review(env.id, "approved", session=session)
+                await submit_review(env.id, ReviewRequest(verdict="approved"), session=session)
         assert exc_info.value.status_code == 409
 
     @pytest.mark.asyncio
     async def test_review_unknown_envelope_raises_404(self, app_with_db):
         from fastapi import HTTPException
 
-        from app.api.routes import submit_review
+        from app.api.routes import ReviewRequest, submit_review
         from core.db import _get_session_factory, init_db
 
         await init_db()
         async with _get_session_factory()() as session:
             with pytest.raises(HTTPException) as exc_info:
-                await submit_review("nonexistent-id", "approved", session=session)
+                await submit_review(
+                    "nonexistent-id", ReviewRequest(verdict="approved"), session=session
+                )
         assert exc_info.value.status_code == 404
 
     @pytest.mark.asyncio
     async def test_review_invalid_verdict_raises_400(self, app_with_db):
         from fastapi import HTTPException
 
-        from app.api.routes import submit_review
+        from app.api.routes import ReviewRequest, submit_review
         from core.db import _get_session_factory, init_db
 
         await init_db()
         async with _get_session_factory()() as session:
             with pytest.raises(HTTPException) as exc_info:
-                await submit_review("any-id", "super_approved", session=session)
+                await submit_review(
+                    "any-id", ReviewRequest(verdict="super_approved"), session=session
+                )
         assert exc_info.value.status_code == 400
 
     @pytest.mark.asyncio
     async def test_review_persists_to_db(self, app_with_db):
-        from app.api.routes import submit_review
+        from app.api.routes import ReviewRequest, submit_review
         from contracts.envelope import Envelope, EnvelopeStatus
         from contracts.events import DomainEvent, EventKind
         from core.db import _get_session_factory, init_db
@@ -466,7 +470,7 @@ class TestJob09_ReviewResumePath:
             await save_envelope(env, session)
 
         async with _get_session_factory()() as session:
-            await submit_review(env.id, "approved", session=session)
+            await submit_review(env.id, ReviewRequest(verdict="approved"), session=session)
 
         async with _get_session_factory()() as session:
             loaded = await load_envelope(env.id, session)

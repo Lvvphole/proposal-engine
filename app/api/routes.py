@@ -35,6 +35,11 @@ class EnvelopeStatusResponse(BaseModel):
     quality_score: float | None = None
 
 
+class ReviewRequest(BaseModel):
+    verdict: str
+    notes: str = ""
+
+
 @router.post("/quotes", response_model=SubmitQuoteResponse)
 async def submit_quote(
     background_tasks: BackgroundTasks,
@@ -98,7 +103,7 @@ async def get_quote_status(
         line_item_count = envelope.extraction.line_item_count
         if envelope.extraction.totals and envelope.extraction.totals.total is not None:
             total = str(envelope.extraction.totals.total)
-        quality_score = envelope.extraction.quality_score
+        quality_score = envelope.extraction.extraction_confidence
 
     return EnvelopeStatusResponse(
         envelope_id=envelope.id,
@@ -126,16 +131,48 @@ async def list_quotes(
     }
 
 
+@router.get("/quotes/{envelope_id}/extraction")
+async def get_quote_extraction(
+    envelope_id: str,
+    session: AsyncSession = Depends(get_session),
+):
+    """Return the extracted data for the Review Surface.
+
+    Available once extraction has run (status ``review_pending`` onward).
+    Returns header, line items, totals, and a quality score.
+    """
+    envelope = await load_envelope(envelope_id, session)
+    if envelope is None:
+        raise HTTPException(status_code=404, detail=f"Envelope {envelope_id!r} not found")
+    if envelope.extraction is None:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Envelope {envelope_id!r} has no extraction yet (status {envelope.status!r})",
+        )
+
+    ext = envelope.extraction
+    return {
+        "envelope_id": envelope.id,
+        "status": envelope.status,
+        "header": ext.header.model_dump(mode="json"),
+        "line_items": [item.model_dump(mode="json") for item in ext.line_items],
+        "totals": ext.totals.model_dump(mode="json"),
+        "quality_score": ext.extraction_confidence,
+    }
+
+
 @router.post("/quotes/{envelope_id}/review")
 async def submit_review(
     envelope_id: str,
-    verdict: str,
-    notes: str = "",
+    body: ReviewRequest,
     session: AsyncSession = Depends(get_session),
 ):
     """Submit a human review decision for a proposal."""
     from contracts.review import ReviewVerdict
     from core import message_bus
+
+    verdict = body.verdict
+    notes = body.notes
 
     if verdict not in [v.value for v in ReviewVerdict]:
         raise HTTPException(status_code=400, detail=f"Invalid verdict: {verdict}")

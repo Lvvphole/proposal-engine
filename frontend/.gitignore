@@ -1,0 +1,16 @@
+# Next.js / Node
+/node_modules
+/.next/
+/out/
+/build
+
+# Build + TS caches
+next-env.d.ts
+*.tsbuildinfo
+
+# Local env files (keep .env.example tracked)
+.env*.local
+.env.local
+
+# Vercel
+.vercel

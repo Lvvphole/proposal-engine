@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 interface ReviewSurfaceProps {
   envelopeId: string;
@@ -18,6 +18,24 @@ interface LineItem {
   confidence: number;
 }
 
+interface Extraction {
+  header: {
+    supplier_name: string;
+    quote_number: string | null;
+    quote_date: string | null;
+  };
+  line_items: LineItem[];
+  totals: {
+    subtotal: number | null;
+    tax_amount: number | null;
+    total: number | null;
+  };
+  quality_score: number;
+}
+
+const money = (v: number | null | undefined) =>
+  v === null || v === undefined ? "—" : `$${Number(v).toFixed(2)}`;
+
 export default function ReviewSurface({
   envelopeId,
   onApprove,
@@ -25,53 +43,39 @@ export default function ReviewSurface({
 }: ReviewSurfaceProps) {
   const [notes, setNotes] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [extraction, setExtraction] = useState<Extraction | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
-  // Placeholder data — production fetches from API
-  const extraction = {
-    header: {
-      supplier_name: "ABC Building Supply",
-      quote_number: "Q-2024-1234",
-      quote_date: "2024-06-15",
-    },
-    line_items: [
-      {
-        sku: "PLY-CDX-12",
-        description: 'CDX Plywood 1/2" 4x8',
-        quantity: 150,
-        unit: "each",
-        unit_price: 28.75,
-        extended_price: 4312.5,
-        confidence: 0.95,
-      },
-      {
-        sku: "NAL-COIL-1",
-        description: 'Coil Nails 1-1/4"',
-        quantity: 10,
-        unit: "box",
-        unit_price: 42.0,
-        extended_price: 420.0,
-        confidence: 0.92,
-      },
-    ] as LineItem[],
-    totals: {
-      subtotal: 4732.5,
-      tax_amount: 331.28,
-      total: 5063.78,
-    },
-    quality_score: 0.91,
-  };
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const res = await fetch(`/api/quotes/${envelopeId}/extraction`);
+        if (!res.ok) throw new Error(`Failed to load extraction (${res.status})`);
+        const data = (await res.json()) as Extraction;
+        if (!cancelled) setExtraction(data);
+      } catch (err) {
+        if (!cancelled)
+          setError(err instanceof Error ? err.message : "Failed to load extraction");
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [envelopeId]);
 
   const handleSubmit = async (verdict: "approved" | "rejected") => {
     setSubmitting(true);
     try {
-      await fetch(`/api/quotes/${envelopeId}/review`, {
+      const res = await fetch(`/api/quotes/${envelopeId}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ verdict, notes }),
       });
+      if (!res.ok) throw new Error(`Review failed (${res.status})`);
       verdict === "approved" ? onApprove() : onReject();
     } catch {
-      alert("Failed to submit review");
+      setError("Failed to submit review");
     } finally {
       setSubmitting(false);
     }
@@ -79,6 +83,14 @@ export default function ReviewSurface({
 
   const confidenceColor = (c: number) =>
     c >= 0.9 ? "text-green-600" : c >= 0.7 ? "text-yellow-600" : "text-red-600";
+
+  if (error) {
+    return <p className="text-red-600">{error}</p>;
+  }
+
+  if (!extraction) {
+    return <p className="text-gray-500 py-12 text-center">Loading extraction…</p>;
+  }
 
   return (
     <div className="space-y-6">
@@ -99,11 +111,11 @@ export default function ReviewSurface({
           </div>
           <div>
             <span className="text-gray-500">Quote #:</span>{" "}
-            {extraction.header.quote_number}
+            {extraction.header.quote_number || "—"}
           </div>
           <div>
             <span className="text-gray-500">Date:</span>{" "}
-            {extraction.header.quote_date}
+            {extraction.header.quote_date || "—"}
           </div>
         </div>
       </div>
@@ -130,8 +142,8 @@ export default function ReviewSurface({
                 <td className="text-right">
                   {item.quantity} {item.unit}
                 </td>
-                <td className="text-right">${item.unit_price.toFixed(2)}</td>
-                <td className="text-right">${item.extended_price.toFixed(2)}</td>
+                <td className="text-right">{money(item.unit_price)}</td>
+                <td className="text-right">{money(item.extended_price)}</td>
                 <td className={`text-right ${confidenceColor(item.confidence)}`}>
                   {(item.confidence * 100).toFixed(0)}%
                 </td>
@@ -146,15 +158,15 @@ export default function ReviewSurface({
         <div className="space-y-1 text-sm max-w-xs ml-auto">
           <div className="flex justify-between">
             <span>Subtotal:</span>
-            <span>${extraction.totals.subtotal.toFixed(2)}</span>
+            <span>{money(extraction.totals.subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tax:</span>
-            <span>${extraction.totals.tax_amount.toFixed(2)}</span>
+            <span>{money(extraction.totals.tax_amount)}</span>
           </div>
           <div className="flex justify-between font-bold text-base border-t pt-1">
             <span>Total:</span>
-            <span>${extraction.totals.total.toFixed(2)}</span>
+            <span>{money(extraction.totals.total)}</span>
           </div>
         </div>
       </div>
