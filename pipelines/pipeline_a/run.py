@@ -8,106 +8,61 @@ Flow: header_extractor → line_item_extractor → totals_extractor → assemble
 
 from __future__ import annotations
 
-from typing import Any
-
 import structlog
 
 from contracts.envelope import Envelope
-from contracts.extraction import ExtractionResult, HeaderData, LineItem, TotalsData
+from contracts.errors import ExtractionError
+from contracts.extraction import ExtractionResult
 from core.config import get_config
 from core.llm import call_llm
-from harness.handoff import validate_handoff
+from harness.document_preparer import build_user_content
+from pipelines.parsing import (
+    compute_confidence,
+    extract_json,
+    parse_header,
+    parse_line_items,
+    parse_totals,
+)
 
 logger = structlog.get_logger()
+
+_BASE_CONFIDENCE = 0.9
 
 
 async def run(envelope: Envelope) -> ExtractionResult:
     """Execute Pipeline A extraction on a structured-table quote."""
     config = get_config()
-    raw_text = envelope.source_bytes_b64 or ""
+    content = build_user_content(envelope)
 
-    # Step 1: Extract header
-    header_response = await call_llm(
-        system=_HEADER_PROMPT,
-        messages=[{"role": "user", "content": raw_text}],
-        model=config.extraction_model,
-        envelope=envelope,
-        agent_name="header_extractor",
-    )
-    header = validate_handoff(
-        _parse_header(header_response),
-        HeaderData,
-        source_agent="header_extractor",
-        target_agent="line_item_extractor",
-    )
+    async def _ask(system: str, agent: str) -> str:
+        return await call_llm(
+            system=system,
+            messages=[{"role": "user", "content": content}],
+            model=config.extraction_model,
+            envelope=envelope,
+            agent_name=agent,
+        )
 
-    # Step 2: Extract line items
-    items_response = await call_llm(
-        system=_LINE_ITEMS_PROMPT,
-        messages=[{"role": "user", "content": raw_text}],
-        model=config.extraction_model,
-        envelope=envelope,
-        agent_name="line_item_extractor",
+    header = parse_header(extract_json(await _ask(_HEADER_PROMPT, "header_extractor")))
+    line_items = parse_line_items(
+        extract_json(await _ask(_LINE_ITEMS_PROMPT, "line_item_extractor"))
     )
-    line_items = _parse_line_items(items_response)
+    totals = parse_totals(extract_json(await _ask(_TOTALS_PROMPT, "totals_extractor")))
 
-    # Step 3: Extract totals
-    totals_response = await call_llm(
-        system=_TOTALS_PROMPT,
-        messages=[{"role": "user", "content": raw_text}],
-        model=config.extraction_model,
-        envelope=envelope,
-        agent_name="totals_extractor",
-    )
-    totals = validate_handoff(
-        _parse_totals(totals_response),
-        TotalsData,
-        source_agent="totals_extractor",
-        target_agent="assembler",
-    )
+    if not line_items:
+        raise ExtractionError(
+            "No line items could be extracted from the document",
+            context={"pipeline": "a", "envelope_id": envelope.id},
+        )
 
-    # Assemble final result
     return ExtractionResult(
         header=header,
         line_items=line_items,
         totals=totals,
         source_pipeline="a",
-        raw_text=raw_text[:500] if raw_text else None,
-        extraction_confidence=0.9,
+        raw_text=content[:1000] if isinstance(content, str) else None,
+        extraction_confidence=compute_confidence(line_items, _BASE_CONFIDENCE),
     )
-
-
-def _parse_header(response: str) -> dict[str, Any]:
-    """Parse LLM header response into a dict.  Stub for JSON parsing."""
-    import json
-
-    try:
-        parsed: dict[str, Any] = json.loads(response)
-        return parsed
-    except json.JSONDecodeError:
-        return {"supplier_name": "Unknown"}
-
-
-def _parse_line_items(response: str) -> list[LineItem]:
-    """Parse LLM line items response.  Stub for JSON parsing."""
-    import json
-
-    try:
-        items = json.loads(response)
-        return [LineItem.model_validate(item) for item in items]
-    except (json.JSONDecodeError, Exception):
-        return []
-
-
-def _parse_totals(response: str) -> dict[str, Any]:
-    """Parse LLM totals response.  Stub for JSON parsing."""
-    import json
-
-    try:
-        parsed: dict[str, Any] = json.loads(response)
-        return parsed
-    except json.JSONDecodeError:
-        return {}
 
 
 _HEADER_PROMPT = """Extract supplier and quote header metadata from this structured table document.

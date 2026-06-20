@@ -10,9 +10,10 @@ Anthropic SDK with:
 
 from __future__ import annotations
 
+from typing import Any
+
 import structlog
 from anthropic import AsyncAnthropic
-from anthropic.types import MessageParam
 from tenacity import retry, stop_after_attempt, wait_exponential
 
 from contracts.envelope import Envelope
@@ -33,7 +34,7 @@ def _get_client() -> AsyncAnthropic:
 async def call_llm(
     *,
     system: str,
-    messages: list[MessageParam],
+    messages: list[dict[str, Any]],
     model: str | None = None,
     max_tokens: int | None = None,
     envelope: Envelope | None = None,
@@ -72,7 +73,7 @@ async def call_llm(
         model=model,
         max_tokens=max_tokens,
         system=system,
-        messages=messages,
+        messages=messages,  # type: ignore[arg-type]  # plain dicts; SDK accepts at runtime
     )
 
     input_tokens = response.usage.input_tokens

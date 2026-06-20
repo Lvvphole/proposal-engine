@@ -8,49 +8,61 @@ is too low.
 
 from __future__ import annotations
 
-import json
-
 import structlog
 
 from contracts.envelope import Envelope
-from contracts.extraction import ExtractionResult, HeaderData, LineItem, TotalsData
+from contracts.errors import ExtractionError
+from contracts.extraction import ExtractionResult
 from core.config import get_config
 from core.llm import call_llm
+from harness.document_preparer import build_user_content
+from pipelines.parsing import (
+    compute_confidence,
+    extract_json,
+    parse_header,
+    parse_line_items,
+    parse_totals,
+)
 
 logger = structlog.get_logger()
+
+_BASE_CONFIDENCE = 0.6
 
 
 async def run(envelope: Envelope) -> ExtractionResult:
     """Execute Pipeline C extraction on an unstructured quote."""
     config = get_config()
-    raw_text = envelope.source_bytes_b64 or ""
+    content = build_user_content(envelope)
 
     response = await call_llm(
         system=_EXTRACTION_PROMPT,
-        messages=[{"role": "user", "content": raw_text}],
+        messages=[{"role": "user", "content": content}],
         model=config.extraction_model,
         max_tokens=8192,
         envelope=envelope,
         agent_name="pipeline_c_extractor",
     )
 
-    try:
-        data = json.loads(response)
-    except json.JSONDecodeError:
-        logger.warning("pipeline_c_json_parse_failed")
-        data = {}
+    parsed = extract_json(response)
+    data = parsed if isinstance(parsed, dict) else {}
 
-    header = HeaderData.model_validate(data.get("header", {"supplier_name": "Unknown"}))
-    line_items = [LineItem.model_validate(item) for item in data.get("line_items", [])]
-    totals = TotalsData.model_validate(data.get("totals", {}))
+    header = parse_header(data.get("header"))
+    line_items = parse_line_items(data.get("line_items"))
+    totals = parse_totals(data.get("totals"))
+
+    if not line_items:
+        raise ExtractionError(
+            "No line items could be extracted from the document",
+            context={"pipeline": "c", "envelope_id": envelope.id},
+        )
 
     return ExtractionResult(
         header=header,
-        line_items=line_items if line_items else [],
+        line_items=line_items,
         totals=totals,
         source_pipeline="c",
-        raw_text=raw_text[:500] if raw_text else None,
-        extraction_confidence=0.6,
+        raw_text=content[:1000] if isinstance(content, str) else None,
+        extraction_confidence=compute_confidence(line_items, _BASE_CONFIDENCE),
     )
 
 

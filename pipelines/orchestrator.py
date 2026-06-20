@@ -17,6 +17,7 @@ from harness.budget import check_budget
 from harness.escalation import escalate
 from harness.instrumentation import increment, timer
 from harness.tracing import record_error, start_span
+from pipelines.classifier import classify
 from pipelines.pipeline_a.run import run as run_pipeline_a
 from pipelines.pipeline_b.run import run as run_pipeline_b
 from pipelines.pipeline_c.run import run as run_pipeline_c
@@ -70,9 +71,21 @@ async def process_envelope(envelope: Envelope) -> Envelope:
                 await _checkpoint(envelope)
 
                 if envelope.classification is None:
-                    pipeline_id = "c"
-                else:
-                    pipeline_id = envelope.classification.pipeline
+                    with start_span("orchestrator.classify"):
+                        envelope.classification = await classify(envelope)
+                    envelope.events.append(
+                        DomainEvent(
+                            kind=EventKind.CLASSIFIED,
+                            agent="classifier",
+                            detail=(
+                                f"pipeline_{envelope.classification.pipeline} "
+                                f"({envelope.classification.confidence:.2f})"
+                            ),
+                        )
+                    )
+                    await _checkpoint(envelope)
+
+                pipeline_id = envelope.classification.pipeline
 
                 # 3. Extraction
                 envelope.advance(

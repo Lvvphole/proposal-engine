@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import base64
 import json
 from pathlib import Path
 from typing import Any
 
+from contracts.envelope import Envelope
 from contracts.errors import ContextWindowExceededError
 
 _POLICY_PATH = Path(__file__).parent.parent / "policies" / "compression_policy.json"
@@ -89,6 +91,54 @@ def preflight_check(content: str, model_id: str) -> None:
                 "model_id": model_id,
             },
         )
+
+
+def decode_text(b64: str) -> str:
+    """Best-effort base64 → UTF-8 text decode.
+
+    Uploaded documents are base64-encoded by the API. Returns the original
+    string unchanged if it isn't valid base64 (e.g. already plain text).
+    """
+    if not b64:
+        return ""
+    try:
+        return base64.b64decode(b64, validate=True).decode("utf-8", errors="replace")
+    except (ValueError, UnicodeError):
+        return b64
+
+
+def build_user_content(envelope: Envelope) -> str | list[dict[str, Any]]:
+    """Build the user-message content for an extraction call.
+
+    - ``image/*``        → a base64 image content block (so the model can read
+      photographed price sheets).
+    - ``application/pdf`` → a base64 document content block.
+    - text-like          → decoded, compression-policy-trimmed plain text.
+
+    The model needs real document content; passing raw base64 as text (the
+    previous behaviour) gave it gibberish.
+    """
+    b64 = envelope.source_bytes_b64 or ""
+    content_type = (envelope.source_content_type or "text/plain").lower().split(";")[0].strip()
+
+    if content_type.startswith("image/"):
+        return [
+            {
+                "type": "image",
+                "source": {"type": "base64", "media_type": content_type, "data": b64},
+            }
+        ]
+
+    if content_type == "application/pdf":
+        return [
+            {
+                "type": "document",
+                "source": {"type": "base64", "media_type": "application/pdf", "data": b64},
+            }
+        ]
+
+    text = decode_text(b64)
+    return prepare_document(text, content_type=content_type)
 
 
 def _reset_cache() -> None:
