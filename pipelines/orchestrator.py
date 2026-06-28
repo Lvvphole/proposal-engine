@@ -13,6 +13,7 @@ from contracts.contractor import ContractorProfile
 from contracts.envelope import Envelope, EnvelopeStatus
 from contracts.errors import BudgetExceededError, RecoveryExhaustedError
 from contracts.events import DomainEvent, EventKind
+from contracts.extraction import ExtractionResult
 from core import message_bus
 from harness.budget import check_budget
 from harness.escalation import escalate
@@ -44,6 +45,61 @@ async def _checkpoint(envelope: Envelope) -> None:
             await save_envelope(envelope, session)
     except Exception as exc:
         logger.warning("checkpoint_failed", envelope_id=envelope.id, error=str(exc))
+
+
+async def _extract_with_recovery(envelope: Envelope, pipeline_id: str) -> ExtractionResult:
+    """Run extraction, falling back to Pipeline C on a recoverable failure.
+
+    Bounded: the classified pipeline is tried once; if it fails (and wasn't
+    already C), Pipeline C — the broadest extractor — is tried as recovery.
+    Budget errors are never recovered (they propagate immediately). Raises
+    RecoveryExhaustedError when every attempt fails, so the caller routes the
+    envelope to a terminal state instead of leaving it stuck mid-extraction.
+    """
+    attempts = [pipeline_id] if pipeline_id == "c" else [pipeline_id, "c"]
+    last_error: Exception | None = None
+
+    for index, attempt_id in enumerate(attempts):
+        is_recovery = index > 0
+        try:
+            with start_span("orchestrator.extraction", pipeline=attempt_id, recovery=is_recovery):
+                result = await _PIPELINE_MAP[attempt_id](envelope)
+            if is_recovery:
+                envelope.events.append(
+                    DomainEvent(
+                        kind=EventKind.RECOVERY_SUCCEEDED,
+                        agent=f"pipeline_{attempt_id}",
+                        detail="recovered via fallback extraction",
+                    )
+                )
+                increment("recovery.succeeded")
+            return result
+        except BudgetExceededError:
+            raise  # budget is terminal — do not burn more attempts
+        except Exception as exc:
+            last_error = exc
+            increment(f"extraction.failed.pipeline_{attempt_id}")
+            logger.warning(
+                "extraction_attempt_failed",
+                envelope_id=envelope.id,
+                pipeline=attempt_id,
+                recovery=is_recovery,
+                error=str(exc),
+            )
+            if attempt_id != attempts[-1]:
+                envelope.events.append(
+                    DomainEvent(
+                        kind=EventKind.RECOVERY_ATTEMPTED,
+                        agent="orchestrator",
+                        detail=f"pipeline_{attempt_id} failed ({exc}); retrying with pipeline_c",
+                    )
+                )
+                increment("recovery.attempted")
+
+    raise RecoveryExhaustedError(
+        f"Extraction failed for envelope {envelope.id} after {len(attempts)} attempt(s)",
+        context={"envelope_id": envelope.id, "attempts": attempts},
+    ) from last_error
 
 
 async def _load_contractor(contractor_id: str | None) -> ContractorProfile:
@@ -116,10 +172,8 @@ async def process_envelope(envelope: Envelope) -> Envelope:
                 )
                 await _checkpoint(envelope)
 
-                with start_span("orchestrator.extraction", pipeline=pipeline_id):
-                    pipeline_fn = _PIPELINE_MAP[pipeline_id]
-                    extraction_result = await pipeline_fn(envelope)
-                    envelope.extraction = extraction_result
+                extraction_result = await _extract_with_recovery(envelope, pipeline_id)
+                envelope.extraction = extraction_result
 
                 envelope.advance(
                     EnvelopeStatus.VALIDATING,
