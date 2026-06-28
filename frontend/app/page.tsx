@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import ReviewSurface from "../components/ReviewSurface";
+import { apiFetch, openAuthedDocument } from "../lib/api";
 
 type QuoteStatus = "idle" | "uploading" | "processing" | "review" | "done";
 
@@ -21,7 +22,7 @@ export default function Home() {
       const formData = new FormData();
       formData.append("file", file);
 
-      const res = await fetch("/api/quotes", {
+      const res = await apiFetch("/api/quotes", {
         method: "POST",
         body: formData,
       });
@@ -43,7 +44,7 @@ export default function Home() {
     const deadline = Date.now() + 120_000; // give up after 2 minutes
     const tick = async () => {
       try {
-        const res = await fetch(`/api/quotes/${id}`);
+        const res = await apiFetch(`/api/quotes/${id}`);
         if (res.ok) {
           const data = await res.json();
           if (data.status === "review_pending" || data.status === "approved") {
@@ -121,14 +122,16 @@ export default function Home() {
             Proposal approved and ready for delivery.
           </p>
           <div className="mt-4 flex items-center justify-center gap-3">
-            <a
-              href={`/api/quotes/${envelopeId}/proposal.html`}
-              target="_blank"
-              rel="noopener noreferrer"
+            <button
+              onClick={() =>
+                openAuthedDocument(`/api/quotes/${envelopeId}/proposal.html`).catch(() =>
+                  setError("Failed to open proposal"),
+                )
+              }
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
             >
               View / print proposal
-            </a>
+            </button>
             <button
               onClick={() => {
                 setStatus("idle");
