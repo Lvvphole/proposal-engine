@@ -4,7 +4,8 @@
   "thresholds": {
     "classifier": { "min_accuracy": 0.90 },
     "line_items": { "min_accuracy": 0.85 },
-    "recovery": { "min_accuracy": 0.80 }
+    "recovery": { "min_accuracy": 0.80 },
+    "pricing": { "min_accuracy": 1.0 }
   },
   "regression_tolerance": 0.02,
   "require_baseline_update_on_improvement": false

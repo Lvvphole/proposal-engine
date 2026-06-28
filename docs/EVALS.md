@@ -12,8 +12,10 @@ Golden Dataset (.jsonl)
         ▼
    Eval Runner (run_evals.py)
         │
-        ├── Runs input through relevant pipeline component
-        ├── Scores output via judge functions
+        ├── Runs each case's recorded `model_response` through the relevant
+        │   DETERMINISTIC component (JSON recovery, line-item validation,
+        │   classification routing, pricing, failure detection)
+        ├── Scores via judge functions
         │
         ▼
    Results compared to baseline.json
@@ -22,28 +24,37 @@ Golden Dataset (.jsonl)
         └── FAIL  →  PR blocked, regression details logged
 ```
 
+The suites are **deterministic** — they score the post-processing logic we own
+against a recorded model output, with **no live LLM calls**, so the gate is
+stable and reproducible in CI. (Live, model-in-the-loop accuracy evals are a
+separate future concern.) Each scorer is registered in `SCORERS` in
+`run_evals.py`.
+
 ## Eval Suites
 
-| Suite | What It Tests | Golden File | Judge |
+| Suite | What It Tests | Golden File | Scoring |
 |---|---|---|---|
-| `classifier` | Format detection + pipeline routing | `classifier_v1.jsonl` | Exact match on `format` and `pipeline` |
-| `line_items` | Item extraction accuracy | `line_items_v1.jsonl` | `extraction_judge.score_line_items` — weighted: count 0.3, description match 0.4, price accuracy 0.3 |
-| `recovery` | Recovery agent success on known failures | `recovery_v1.jsonl` | Before/after item count + error resolution |
+| `classifier` | Routing from a classification output | `classifier_v1.jsonl` | `extract_json` + `ClassificationResult` + fallback routing → exact match on `format` + `pipeline` |
+| `line_items` | JSON recovery + per-row validation | `line_items_v1.jsonl` | `extract_json` + `parse_line_items` → `extraction_judge.score_line_items` ≥ 0.85 |
+| `recovery` | Detectability of known extraction failures | `recovery_v1.jsonl` | Deterministic re-detection of the documented `error` (count / subtotal mismatch) |
+| `pricing` | Proposal builder money math | `pricing_v1.jsonl` | `build_proposal` → exact `Decimal` match on subtotal, markup, tax, total |
 
 ## Golden Dataset Format
 
-Each `.jsonl` file contains one test case per line:
+Each `.jsonl` file contains one test case per line. Suites that exercise
+post-processing carry a `model_response` (the raw text a model would emit):
 
 ```json
 {
   "id": "cls-001",
   "input": "raw document text or reference",
+  "model_response": "```json\n{\"format\": \"structured_table\", \"pipeline\": \"a\", \"confidence\": 0.95, \"reasoning\": \"...\"}\n```",
   "expected": { "format": "structured_table", "pipeline": "a" },
   "tags": ["structured", "building-materials"]
 }
 ```
 
-Fields: `id` (unique, prefixed by suite), `input` (the raw text/reference), `expected` (ground truth output), `tags` (for filtering and analysis).
+Fields: `id` (unique, prefixed by suite), `input` (reference text), `model_response` (the model output scored deterministically), `expected` (ground truth), `tags`. The `pricing` suite instead carries `extraction` + `contractor` inputs.
 
 ## Scoring
 
