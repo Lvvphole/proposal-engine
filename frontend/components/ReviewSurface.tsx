@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { apiFetch } from "../lib/api";
 
 interface ReviewSurfaceProps {
   envelopeId: string;
@@ -63,14 +64,14 @@ export default function ReviewSurface({
     let cancelled = false;
     (async () => {
       try {
-        const res = await fetch(`/api/quotes/${envelopeId}/extraction`);
+        const res = await apiFetch(`/api/quotes/${envelopeId}/extraction`);
         if (!res.ok) throw new Error(`Failed to load extraction (${res.status})`);
         const data = (await res.json()) as Extraction;
         if (!cancelled) setExtraction(data);
 
         // The priced proposal is generated alongside extraction; tolerate its
         // absence rather than failing the whole surface.
-        const pres = await fetch(`/api/quotes/${envelopeId}/proposal`);
+        const pres = await apiFetch(`/api/quotes/${envelopeId}/proposal`);
         if (pres.ok && !cancelled) setProposal((await pres.json()) as Proposal);
       } catch (err) {
         if (!cancelled)
@@ -85,7 +86,7 @@ export default function ReviewSurface({
   const handleSubmit = async (verdict: "approved" | "rejected") => {
     setSubmitting(true);
     try {
-      const res = await fetch(`/api/quotes/${envelopeId}/review`, {
+      const res = await apiFetch(`/api/quotes/${envelopeId}/review`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ verdict, notes }),

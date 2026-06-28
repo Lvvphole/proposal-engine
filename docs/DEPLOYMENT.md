@@ -73,17 +73,22 @@ to ECR, runs migrations, then forces a new ECS deployment.
 ### Authentication (Supabase JWT)
 
 The API verifies Supabase access tokens when `AUTH_ENABLED=true`, deriving the
-user from the token's `sub` and scoping quotes/contractors to that user. It is
-**off by default** so local dev and the current deploy keep working. To turn it
-on in production:
+user from the token's `sub` and scoping quotes/contractors to that user. The
+Next.js frontend signs users in with Supabase Auth (`components/AuthGate.tsx`)
+and attaches the access token to every API call (`lib/api.ts`). Both are
+**off by default** so local dev keeps working. To turn auth on, set all of
+these together (frontend and backend must agree):
 
-1. Set `AUTH_ENABLED=true` and `SUPABASE_JWT_SECRET` (Supabase → Project
-   Settings → API → JWT Secret) on the API task (inject the secret like the
-   others).
-2. **Wire frontend login first** — the Next.js app must sign users in with
-   Supabase Auth and send the access token as `Authorization: Bearer <jwt>` on
-   `/api/*` calls. Until that lands, enabling auth will 401 the frontend. (This
-   is the immediate next step after this change.)
+| Where | Variable | Value |
+|---|---|---|
+| Backend (API task) | `AUTH_ENABLED` | `true` |
+| Backend (API task) | `SUPABASE_JWT_SECRET` | Supabase → Settings → API → JWT Secret (a real secret) |
+| Frontend (Vercel) | `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` |
+| Frontend (Vercel) | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | the project's anon (publishable) key |
+
+If only one side is configured the app will 401 — enable both at once. The
+anon key is publishable; never put the JWT secret or `service_role` key in the
+frontend.
 
 ### Infrastructure (Terraform)
 
