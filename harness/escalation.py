@@ -1,10 +1,11 @@
-"""Escalation routing for pipeline failures.
+"""Escalation routing for terminal pipeline failures.
 
-When an agent fails and retries are exhausted, the escalation module
-decides the next step:
-  1. Route to recovery agent (automated fix attempt)
-  2. Route to Pipeline C fallback (broad extraction)
-  3. Escalate to human review with failure context
+Recovery (retry via the Pipeline C fallback) is handled upstream in the
+orchestrator. By the time a failure reaches here it is terminal: the envelope
+could not be extracted, so there is no proposal to review. Escalation moves it
+to the terminal ``FAILED`` state with the appropriate event and surfaces it on
+the bus — it never returns the envelope to a transient processing state (doing
+so previously left failed quotes stranded in ``extracting`` forever).
 """
 
 from __future__ import annotations
@@ -20,48 +21,22 @@ logger = structlog.get_logger()
 
 
 async def escalate(envelope: Envelope, error: Exception) -> str:
-    """Determine escalation path and update envelope status.
+    """Move the envelope to a terminal FAILED state and surface the failure.
 
-    Returns:
-        The escalation action taken: 'recovery', 'fallback', or 'human_review'.
+    Returns a short reason label ('budget_exceeded', 'recovery_exhausted', or
+    'error') for metrics/logging.
     """
     if isinstance(error, BudgetExceededError):
-        # Budget exceeded → always human review, no further LLM calls
-        envelope.advance(
-            EnvelopeStatus.REVIEW_PENDING,
-            DomainEvent(
-                kind=EventKind.BUDGET_EXCEEDED,
-                agent="escalation",
-                detail=str(error),
-            ),
-        )
-        await message_bus.publish(envelope.events[-1])
-        logger.warning("escalation_budget_exceeded", envelope_id=envelope.id)
-        return "human_review"
+        event_kind, reason = EventKind.BUDGET_EXCEEDED, "budget_exceeded"
+    elif isinstance(error, RecoveryExhaustedError):
+        event_kind, reason = EventKind.RECOVERY_EXHAUSTED, "recovery_exhausted"
+    else:
+        event_kind, reason = EventKind.EXTRACTION_FAILED, "error"
 
-    if isinstance(error, RecoveryExhaustedError):
-        # All retries spent → human review
-        envelope.advance(
-            EnvelopeStatus.REVIEW_PENDING,
-            DomainEvent(
-                kind=EventKind.RECOVERY_EXHAUSTED,
-                agent="escalation",
-                detail=str(error),
-            ),
-        )
-        await message_bus.publish(envelope.events[-1])
-        logger.warning("escalation_recovery_exhausted", envelope_id=envelope.id)
-        return "human_review"
-
-    # Default: attempt recovery agent
     envelope.advance(
-        EnvelopeStatus.EXTRACTING,
-        DomainEvent(
-            kind=EventKind.RECOVERY_ATTEMPTED,
-            agent="escalation",
-            detail=f"Routing to recovery agent: {error}",
-        ),
+        EnvelopeStatus.FAILED,
+        DomainEvent(kind=event_kind, agent="escalation", detail=str(error)),
     )
     await message_bus.publish(envelope.events[-1])
-    logger.info("escalation_to_recovery", envelope_id=envelope.id)
-    return "recovery"
+    logger.warning("escalated_to_failed", envelope_id=envelope.id, reason=reason)
+    return reason
