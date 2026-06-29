@@ -6,7 +6,14 @@ The system deploys as three pieces:
 |---|---|---|
 | **Database** | Supabase (managed Postgres) | Schema via Alembic migrations |
 | **Frontend** (Review Surface, Next.js) | Vercel | Vercel Git integration |
-| **Backend** (FastAPI API + MCP server) | AWS ECS Fargate | `deploy.yml` → ECR → ECS |
+| **Backend** (FastAPI API) | **Render** *(recommended)* **or** AWS ECS Fargate | Render blueprint **or** `deploy.yml` → ECR → ECS |
+
+> **Two backend hosting paths exist.** The simplest is
+> **[Render](./RENDER_DEPLOY.md)** — connect the repo, paste three secrets,
+> deploy. The AWS path below is fully built (`infra/terraform/` + this
+> runbook) and gives finer control but needs first-time AWS bootstrap
+> ([`AWS_SETUP.md`](./AWS_SETUP.md)). Same Docker image either way; you can
+> re-platform later. The rest of this doc covers the AWS path.
 
 ```
         Browser

@@ -86,7 +86,9 @@ cd frontend && npm run lint && npm run typecheck
 
 - [Architecture overview](./CLAUDE.md)
 - [Extraction architecture](./docs/EXTRACTION_ARCHITECTURE.md)
-- [Deployment guide](./docs/DEPLOYMENT.md)
+- [Deployment (overview)](./docs/DEPLOYMENT.md) — Supabase + Vercel + backend host
+- [Render deploy (recommended)](./docs/RENDER_DEPLOY.md) — simplest backend host
+- [AWS setup](./docs/AWS_SETUP.md) — first-time AWS bootstrap for the ECS path
 - [Evaluation guide](./docs/EVALS.md)
 - [Directory structure](./docs/DIRECTORY_STRUCTURE.md)
 

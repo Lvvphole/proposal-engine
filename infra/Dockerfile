@@ -26,12 +26,14 @@ COPY eval/ eval/
 COPY migrations/ migrations/
 COPY alembic.ini alembic.ini
 
-# Production stage
-FROM base AS production
-EXPOSE 8000
-CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
-
-# MCP server stage
+# MCP server stage (built explicitly via --target mcp; not the default stage)
 FROM base AS mcp
 EXPOSE 3100
 CMD ["python", "-m", "proposal_engine_mcp"]
+
+# Production stage — kept LAST so platforms that build the final stage by
+# default (e.g. Render) get the API. Honors $PORT (Render injects it) and
+# falls back to 8000 (ECS task def / docker-compose set PORT=8000).
+FROM base AS production
+EXPOSE 8000
+CMD ["sh", "-c", "uvicorn app.main:app --host 0.0.0.0 --port ${PORT:-8000}"]
