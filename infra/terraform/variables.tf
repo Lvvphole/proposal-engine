@@ -51,3 +51,18 @@ variable "cors_origins" {
   type        = string
   default     = ""
 }
+
+variable "github_repo" {
+  description = "owner/repo allowed to assume the CI deploy role via GitHub OIDC."
+  type        = string
+  default     = "Lvvphole/proposal-engine"
+}
+
+variable "create_github_oidc_provider" {
+  description = <<-EOT
+    Create the GitHub Actions OIDC provider. Set false if the account already
+    has one (only one provider per URL is allowed) and reference it instead.
+  EOT
+  type        = bool
+  default     = true
+}

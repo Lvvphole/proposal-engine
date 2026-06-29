@@ -1,0 +1,53 @@
+# Render blueprint — runs the Docker backend as a normal long-running web
+# service. Background tasks + SSE work because the container stays up between
+# requests (unlike serverless). Pair with Supabase (DB) and Vercel (frontend).
+#
+# To deploy: in Render, Blueprints → New Blueprint → connect this repo.
+# Render reads this file and creates the service; set the env vars marked
+# `sync: false` in the dashboard (they are secrets that don't belong in git).
+
+services:
+  - type: web
+    name: proposal-engine-api
+    runtime: docker
+    dockerfilePath: ./infra/Dockerfile
+    dockerContext: .
+    # Apply database migrations before the new image starts taking traffic.
+    preDeployCommand: alembic upgrade head
+    healthCheckPath: /health
+    plan: starter
+    # Render auto-restarts on /health failures and across deploys.
+    envVars:
+      # Secrets — set these in the Render dashboard (or `render env set …`),
+      # never commit. `sync: false` keeps them out of the blueprint diff.
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: DATABASE_URL          # Supabase connection string
+        sync: false
+      - key: SUPABASE_JWT_SECRET   # required when AUTH_ENABLED=true
+        sync: false
+
+      # Non-secret config — committed defaults can be overridden in the dashboard.
+      - key: AUTH_ENABLED
+        value: "false"             # flip to "true" once the frontend sends tokens
+      - key: SUPABASE_JWT_AUDIENCE
+        value: authenticated
+      - key: CORS_ORIGINS
+        sync: false                # set to the Vercel URL once it's deployed
+      - key: HOST
+        value: "0.0.0.0"
+      # PORT is injected by Render; the Dockerfile honors it.
+      - key: DEFAULT_MODEL
+        value: claude-sonnet-4-20250514
+      - key: CLASSIFIER_MODEL
+        value: claude-haiku-3-5-20241022
+      - key: EXTRACTION_MODEL
+        value: claude-sonnet-4-20250514
+      - key: MAX_TOKENS
+        value: "4096"
+      - key: BUDGET_DAILY_LIMIT_USD
+        value: "25.00"
+      - key: BUDGET_PER_ENVELOPE_LIMIT_USD
+        value: "2.00"
+      - key: DEBUG
+        value: "false"

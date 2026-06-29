@@ -15,8 +15,10 @@ Deployment and environment configuration for the proposal engine.
 | `terraform/alb.tf` | Load balancer, target group, listeners (HTTP/HTTPS) |
 | `terraform/ecs.tf` | Task execution role, API task definition, ECS service |
 | `terraform/security.tf` | IAM task role, secrets, security groups |
+| `terraform/github_oidc.tf` | GitHub Actions OIDC deploy role (the `AWS_ROLE_ARN`) |
 | `terraform/PLAN.md` | Original design notes for the deployment infra |
 
 The backend runs on **AWS ECS Fargate** behind an ALB; Postgres is **Supabase**
-and the frontend is on **Vercel**. See [../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md)
-for the full apply runbook and required secrets.
+and the frontend is on **Vercel**. First-time AWS bootstrap (OIDC role, secrets,
+state bucket) is in [../docs/AWS_SETUP.md](../docs/AWS_SETUP.md); the full
+apply/runbook is in [../docs/DEPLOYMENT.md](../docs/DEPLOYMENT.md).
